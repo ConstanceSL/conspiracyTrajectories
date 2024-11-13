@@ -44,6 +44,25 @@ async function selectDataFolder() {
     }
 }
 
+// Request User Folder Access and Store in sessionStorage
+async function requestUserFolderAccess() {
+    try {
+        const baseFolderHandle = await window.showDirectoryPicker();
+        const usersFolderHandle = await baseFolderHandle.getDirectoryHandle('Users', { create: false });
+        const userFolderHandle = await usersFolderHandle.getDirectoryHandle(selectedUser);
+
+        // Store the folder handle or name in sessionStorage
+        sessionStorage.setItem('selectedUser', selectedUser);
+        sessionStorage.setItem('baseFolderName', baseFolderHandle.name);
+
+        console.log(`User folder for "${selectedUser}" accessed and stored successfully.`);
+    } catch (error) {
+        console.error('Failed to access and store user folder:', error);
+        alert('Failed to access the selected user folder. Please try again.');
+    }
+}
+
+
 // Load Users Folder
 async function loadUsersFolder() {
     try {
