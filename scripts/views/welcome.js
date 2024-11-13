@@ -2,7 +2,6 @@
 let folderHandle = null;
 let folderPath = '';
 let usernamesCSV = [];
-let currentProfile = null;
 let username = '';
 
 // Check Browser Compatibility
@@ -85,24 +84,17 @@ async function createProfile() {
     await createUserDataFolder();
 
     alert('New user created.');
+    document.getElementById('create-profile-btn').classList.add('d-none');
     document.getElementById('open-data-btn').classList.remove('d-none');
 }
 
 // Save `usernames.csv` in the App's Data Folder
 async function saveUsernamesCSV() {
     try {
-        const response = await fetch('./data/usernames.csv');
-        const fileHandle = await window.showSaveFilePicker({
-            suggestedName: 'usernames.csv',
-            types: [
-                {
-                    description: 'CSV file',
-                    accept: { 'text/csv': ['.csv'] },
-                },
-            ],
-        });
-
-        const writableStream = await fileHandle.createWritable();
-        await writableStream.write(response);
+        const appDataFolder = await window.showDirectoryPicker({ startIn: 'data' });
+        const fileHandle = await appDataFolder.getFileHandle('usernames.csv', { create: true });
+        const writable = await fileHandle.createWritable();
+        const csvContent = Papa.parse(usernamesCSV, { header: true, skipEmptyLines: true }).data;
+        await writable.write(csvContent);
         await writable.close();
-        console.log(`User created with data filehandle
+    } catch (error
