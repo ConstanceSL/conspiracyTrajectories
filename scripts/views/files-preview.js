@@ -19,7 +19,7 @@ async function loadFilesPreview() {
     document.getElementById('username-display').textContent = username;
 
     try {
-        // Ask user to confirm accessing the user's folder
+        // Request folder access and load 'users.csv'
         await requestUserFolderAccess();
         await loadUsersCSV();
     } catch (error) {
@@ -31,7 +31,6 @@ async function loadFilesPreview() {
 // Request User Folder Access
 async function requestUserFolderAccess() {
     try {
-        // Ask the user to select the "Users" folder manually
         const folderHandle = await window.showDirectoryPicker();
         const usersFolderHandle = await folderHandle.getDirectoryHandle('Users', { create: false });
         userFolderHandle = await usersFolderHandle.getDirectoryHandle(username);
@@ -41,7 +40,7 @@ async function requestUserFolderAccess() {
     }
 }
 
-// Load 'users.csv' and Display Table
+// Load and Parse 'users.csv'
 async function loadUsersCSV() {
     try {
         const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
@@ -50,7 +49,14 @@ async function loadUsersCSV() {
         const text = await file.text();
         const parsedData = Papa.parse(text, { header: true });
 
+        if (parsedData.errors.length > 0) {
+            console.error('CSV Parsing Errors:', parsedData.errors);
+            alert('There were errors parsing users.csv. Please check the file format.');
+            return;
+        }
+
         usersCSVData = parsedData.data;
+        console.log('Parsed users.csv data:', usersCSVData);
         displayUsersTable(parsedData.meta.fields, parsedData.data);
     } catch (error) {
         throw new Error('Failed to load and parse users.csv.');
@@ -61,48 +67,21 @@ async function loadUsersCSV() {
 function displayUsersTable(fields, data) {
     const filePreviewDiv = document.getElementById('file-preview');
     filePreviewDiv.innerHTML = `
-        <h3>Users CSV</h3>
-        <table id="users-table" class="table">
+        <h3>Users CSV Data</h3>
+        <table id="users-table" class="table table-striped">
             <thead>
                 <tr>${fields.map(field => `<th>${field}</th>`).join('')}</tr>
             </thead>
-            <tbody></tbody>
+            <tbody>
+                ${data.map(row => `
+                    <tr>${fields.map(field => `<td>${row[field] || ''}</td>`).join('')}</tr>
+                `).join('')}
+            </tbody>
         </table>
     `;
 
-    const tableBody = document.querySelector('#users-table tbody');
-    tableBody.innerHTML = data.map((row, index) => `
-        <tr data-index="${index}">
-            ${fields.map(field => `<td>${row[field] || ''}</td>`).join('')}
-        </tr>
-    `).join('');
-
-    tableBody.querySelectorAll('tr').forEach(row => {
-        row.addEventListener('click', () => {
-            const rowIndex = row.getAttribute('data-index');
-            const authorName = usersCSVData[rowIndex]['Author'];
-            openTrajectoriesFile(authorName);
-        });
-    });
+    console.log('Table rendered successfully.');
 }
 
-// Open File from 'TrajectoriesToAnalyse'
-async function openTrajectoriesFile(authorName) {
-    try {
-        const fileName = `${authorName}.csv`;
-        const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
-        const trajectoriesFolderHandle = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
-        const fileHandle = await trajectoriesFolderHandle.getFileHandle(fileName);
-
-        const file = await fileHandle.getFile();
-        const text = await file.text();
-        const parsedData = Papa.parse(text, { header: true });
-
-        currentFileHandle = fileHandle;
-        currentFileData = parsedData.data;
-        displayFilePreview(parsedData.meta.fields, parsedData.data);
-    } catch (error) {
-        console.error(`Error opening file "${authorName}.csv":`, error);
-        alert(`Failed to open file "${authorName}.csv".`);
-    }
-}
+// Initialize the Files Preview Page
+document.addEventListener('DOMContentLoaded', loadFilesPreview);
