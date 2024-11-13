@@ -12,3 +12,23 @@ async function saveCSVFile(fileName, data) {
         alert(`Failed to save ${fileName}.`);
     }
 }
+
+// Utility function to load a CSV file using the File System Access API or fallback
+async function loadCSVFile(fileName) {
+    try {
+        if (folderHandle) {
+            // Use the File System Access API if folderHandle is available
+            const fileHandle = await folderHandle.getFileHandle(fileName);
+            const file = await fileHandle.getFile();
+            const text = await file.text();
+            return Papa.parse(text, { header: true }).data;
+        } else {
+            alert('Folder not selected. Please select a data folder first.');
+            return [];
+        }
+    } catch (error) {
+        console.error(`Error loading ${fileName}:`, error);
+        alert(`Failed to load ${fileName}. Please check the folder contents.`);
+        return [];
+    }
+}
