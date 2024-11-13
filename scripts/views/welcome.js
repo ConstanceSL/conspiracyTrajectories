@@ -9,16 +9,41 @@ async function loadWelcomeScreen() {
     appContent.innerHTML = `
         <h2>Welcome to the Social Media Analysis App</h2>
         <input type="text" id="username" class="form-control" placeholder="Enter your username">
-        <button id="select-folder-btn" class="btn btn-secondary mt-3">Select Data Folder</button>
         <button id="check-profile-btn" class="btn btn-primary mt-3">Check Profile</button>
         <div id="status-message" class="mt-3"></div>
     `;
 
-    document.getElementById('select-folder-btn').addEventListener('click', selectDataFolder);
+    // Event listener for checking the profile
     document.getElementById('check-profile-btn').addEventListener('click', checkUserProfile);
 }
 
-// Select Data Folder using File System Access API
+// Check User Profile after entering the username
+async function checkUserProfile() {
+    const username = document.getElementById('username').value.trim();
+
+    if (!username) {
+        alert('Please enter a valid username.');
+        return;
+    }
+
+    const profile = await loadUserProfile(username);
+
+    if (profile) {
+        const confirmSelection = confirm(`Profile found for ${username}. Do you want to select a data folder?`);
+        if (confirmSelection) {
+            await selectDataFolder();
+            navigateTo(loadFilesPreviewScreen);
+        }
+    } else {
+        const createProfile = confirm('Profile not found. Do you want to create a new profile?');
+        if (createProfile) {
+            await selectDataFolder();
+            await saveNewProfile(username);
+        }
+    }
+}
+
+// Select Data Folder using the File System Access API
 async function selectDataFolder() {
     try {
         folderHandle = await window.showDirectoryPicker();
@@ -29,22 +54,6 @@ async function selectDataFolder() {
     }
 }
 
-// Check User Profile
-async function checkUserProfile() {
-    const username = document.getElementById('username').value;
-    if (!folderHandle) {
-        alert('Please select a data folder first.');
-        return;
-    }
-
-    const profile = await loadUserProfile(username);
-    if (profile) {
-        navigateTo(loadFilesPreviewScreen);
-    } else {
-        alert('Profile not found. Please create a new profile.');
-    }
-}
-
 // Load User Profile from usernames.csv
 async function loadUserProfile(username) {
     const usernamesCSV = await loadCSVFile('usernames.csv');
@@ -52,16 +61,17 @@ async function loadUserProfile(username) {
     return usernamesCSV.find(profile => profile.username.toLowerCase() === lowerCaseUsername) || null;
 }
 
-// Load a CSV File from the Selected Folder
-async function loadCSVFile(fileName) {
-    try {
-        const fileHandle = await folderHandle.getFileHandle(fileName);
-        const file = await fileHandle.getFile();
-        const text = await file.text();
-        return Papa.parse(text, { header: true }).data;
-    } catch (error) {
-        console.error(`Error loading ${fileName}:`, error);
-        alert(`Failed to load ${fileName}. Please check the folder contents.`);
-        return [];
-    }
+// Save a New Profile
+async function saveNewProfile(username) {
+    const date = new Date().toISOString();
+    const newProfile = {
+        username,
+        folderPath: folderHandle.name,
+        dateCreated: date,
+        dateLastUpdated: date,
+    };
+
+    usernamesCSV.push(newProfile);
+    await saveCSVFile('usernames.csv', usernamesCSV);
+    alert('New profile created and saved successfully.');
 }
