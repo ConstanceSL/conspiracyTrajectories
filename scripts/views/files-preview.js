@@ -8,7 +8,13 @@ let currentFileData = [];
 // Initialize Files Preview Page
 async function loadFilesPreview() {
     const urlParams = new URLSearchParams(window.location.search);
-    username = urlParams.get('username');
+    username = urlParams.get('username'); // Get the username from the URL parameter
+
+    if (!username) {
+        alert('Username not provided. Please go back and select a user.');
+        return;
+    }
+
     document.getElementById('username-display').textContent = username;
 
     try {
@@ -26,7 +32,7 @@ async function loadUserFolder() {
     try {
         // Access 'Users/username/Data' directly
         const usersFolderHandle = await navigator.storage.getDirectory();
-        const userFolderHandle = await usersFolderHandle.getDirectoryHandle('Users');
+        userFolderHandle = await usersFolderHandle.getDirectoryHandle('Users');
         userFolderHandle = await userFolderHandle.getDirectoryHandle(username);
         console.log(`User folder for "${username}" accessed successfully.`);
     } catch (error) {
@@ -97,52 +103,6 @@ async function openTrajectoriesFile(authorName) {
     } catch (error) {
         console.error(`Error opening file "${authorName}.csv":`, error);
         alert(`Failed to open file "${authorName}.csv".`);
-    }
-}
-
-// Display File Preview
-function displayFilePreview(fields, data) {
-    const filePreviewDiv = document.getElementById('file-preview');
-    filePreviewDiv.innerHTML = `
-        <h3>File Preview</h3>
-        <table id="file-table" class="table">
-            <thead>
-                <tr>${fields.map(field => `<th>${field}</th>`).join('')}</tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-        <button id="save-changes-btn" class="btn btn-primary mt-3">Save Changes</button>
-    `;
-
-    const tableBody = document.querySelector('#file-table tbody');
-    tableBody.innerHTML = data.slice(0, 10).map(row => `
-        <tr>${fields.map(field => `<td contenteditable="${field.startsWith('Notes_')}">${row[field] || ''}</td>`).join('')}</tr>
-    `).join('');
-
-    document.getElementById('save-changes-btn').addEventListener('click', saveChanges);
-}
-
-// Save Changes to the File
-async function saveChanges() {
-    try {
-        const tableBody = document.querySelector('#file-table tbody');
-        const updatedData = Array.from(tableBody.rows).map(row => {
-            const rowData = {};
-            Array.from(row.cells).forEach((cell, index) => {
-                rowData[currentFileData[0].meta.fields[index]] = cell.textContent;
-            });
-            return rowData;
-        });
-
-        const csvContent = Papa.unparse(updatedData);
-        const writable = await currentFileHandle.createWritable();
-        await writable.write(csvContent);
-        await writable.close();
-
-        alert('Changes saved successfully.');
-    } catch (error) {
-        console.error('Error saving changes:', error);
-        alert('Failed to save changes.');
     }
 }
 

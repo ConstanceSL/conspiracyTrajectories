@@ -104,9 +104,15 @@ function selectUser(username) {
     const selectedButton = document.getElementById(`user-btn-${username}`);
     selectedButton.classList.add('active-user');
 
-    // Show the "View Data" button without alert
+    // Show the "View Data" button
     document.getElementById('view-data-btn').classList.remove('d-none');
+
+    // Redirect to Files Preview page with the selected username
+    document.getElementById('view-data-btn').addEventListener('click', () => {
+        window.location.href = `files-preview.html?username=${encodeURIComponent(selectedUser)}`;
+    });
 }
+
 
 // Prompt for New User Creation
 async function promptNewUser() {
