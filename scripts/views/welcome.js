@@ -91,10 +91,51 @@ async function createProfile() {
 // Save `usernames.csv` in the App's Data Folder
 async function saveUsernamesCSV() {
     try {
-        const appDataFolder = await window.showDirectoryPicker({ startIn: 'data' });
-        const fileHandle = await appDataFolder.getFileHandle('usernames.csv', { create: true });
+        const fileHandle = await getAppDataFileHandle('usernames.csv', { create: true });
         const writable = await fileHandle.createWritable();
-        const csvContent = Papa.parse(usernamesCSV, { header: true, skipEmptyLines: true }).data;
+        const csvContent = Papa.unparse(usernamesCSV);
         await writable.write(csvContent);
         await writable.close();
-    } catch (error
+    } catch (error) {
+        console.error('Error saving usernames.csv:', error);
+    }
+}
+
+// Helper function to get a handle for the App's Data Folder
+async function getAppDataFileHandle(fileName, options) {
+    const appDataFolderHandle = await navigator.storage.getDirectory();
+    return await appDataFolderHandle.getFileHandle(fileName, options);
+}
+
+// Create User Data Folder and Placeholder Files
+async function createUserDataFolder() {
+    try {
+        const userFolderHandle = await folderHandle.getDirectoryHandle(`users/${username}`, { create: true });
+        console.log(`User folder "users/${username}" created successfully.`);
+
+        const filesToCreate = ['notes.csv', 'annotations.csv', 'summary.txt'];
+        for (const fileName of filesToCreate) {
+            await createFile(userFolderHandle, fileName);
+        }
+    } catch (error) {
+        console.error('Error creating user data folder or files:', error);
+    }
+}
+
+// Create a Single File in the User's Folder
+async function createFile(folderHandle, fileName) {
+    try {
+        const fileHandle = await folderHandle.getFileHandle(fileName, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(`This is a placeholder for ${fileName}`);
+        await writable.close();
+        console.log(`${fileName} created successfully.`);
+    } catch (error) {
+        console.error(`Error creating ${fileName}:`, error);
+    }
+}
+
+// Open Data Tab
+function openDataTab() {
+    window.open('files-preview.html', '_blank');
+}
