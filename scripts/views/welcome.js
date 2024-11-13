@@ -182,7 +182,13 @@ async function copyAndModifyCSVFile(sourceFolderHandle, targetFolderHandle, file
                 row[notesColumn] = '';
             });
         }
-
+        const summaryColumn = `Summary_${username}`;
+        if (!parsedData.meta.fields.includes(summaryColumn)) {
+            parsedData.meta.fields.push(summaryColumn);
+            parsedData.data.forEach(row => {
+                row[summaryColumn] = '';
+            });
+        }
         const csvContent = Papa.unparse(parsedData.data);
         const writable = await newFileHandle.createWritable();
         await writable.write(csvContent);
