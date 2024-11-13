@@ -107,12 +107,12 @@ function selectUser(username) {
     // Show the "View Data" button
     document.getElementById('view-data-btn').classList.remove('d-none');
 
-    // Redirect to Files Preview page with the selected username
+    // Redirect to Files Preview page with the selected username as a URL parameter
     document.getElementById('view-data-btn').addEventListener('click', () => {
-        window.location.href = `files-preview.html?username=${encodeURIComponent(selectedUser)}`;
+        const encodedUsername = encodeURIComponent(selectedUser);
+        window.location.href = `files-preview.html?username=${encodedUsername}`;
     });
 }
-
 
 // Prompt for New User Creation
 async function promptNewUser() {

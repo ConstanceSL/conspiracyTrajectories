@@ -10,8 +10,10 @@ async function loadFilesPreview() {
     const urlParams = new URLSearchParams(window.location.search);
     username = urlParams.get('username'); // Get the username from the URL parameter
 
-    if (!username) {
-        alert('Username not provided. Please go back and select a user.');
+    // Check if the username is provided
+    if (!username || username.trim() === '') {
+        alert('No username selected. Redirecting back to the Welcome Screen.');
+        window.location.href = 'index.html'; // Redirect to Welcome Screen
         return;
     }
 
@@ -26,6 +28,7 @@ async function loadFilesPreview() {
         alert('Failed to load users.csv. Please make sure the folder structure is correct.');
     }
 }
+
 
 // Load the User Folder (Assuming Standard Path)
 async function loadUserFolder() {
