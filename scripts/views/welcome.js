@@ -1,5 +1,6 @@
 // Globals
 let folderHandle = null;
+let folderPath = '';
 let usernamesCSV = [];
 let currentProfile = null;
 
@@ -11,6 +12,7 @@ async function loadWelcomeScreen() {
         <input type="text" id="username" class="form-control" placeholder="Enter your username">
         <button id="check-profile-btn" class="btn btn-primary mt-3">Check Profile</button>
         <div id="status-message" class="mt-3"></div>
+        <input type="file" id="file-input" class="form-control d-none" webkitdirectory directory multiple>
     `;
 
     // Event listener for checking the profile
@@ -43,14 +45,35 @@ async function checkUserProfile() {
     }
 }
 
-// Select Data Folder using the File System Access API
+// Select Data Folder with Fallback for Unsupported Browsers
 async function selectDataFolder() {
-    try {
-        folderHandle = await window.showDirectoryPicker();
-        document.getElementById('status-message').innerText = `Folder selected: ${folderHandle.name}`;
-    } catch (error) {
-        console.error('Folder selection cancelled:', error);
-        alert('Please select a valid folder to proceed.');
+    if (window.showDirectoryPicker) {
+        // Modern API is supported
+        try {
+            folderHandle = await window.showDirectoryPicker();
+            folderPath = folderHandle.name;
+            document.getElementById('status-message').innerText = `Folder selected: ${folderPath}`;
+        } catch (error) {
+            console.error('Folder selection cancelled:', error);
+            alert('Please select a valid folder to proceed.');
+        }
+    } else {
+        // Fallback for browsers that do not support showDirectoryPicker (e.g., Firefox)
+        alert('Your browser does not support folder selection. Please select a file from the data folder instead.');
+        const fileInput = document.getElementById('file-input');
+        fileInput.classList.remove('d-none');
+        fileInput.addEventListener('change', handleFileInput);
+    }
+}
+
+// Handle File Input Fallback
+function handleFileInput(event) {
+    const files = event.target.files;
+    if (files.length > 0) {
+        folderPath = files[0].webkitRelativePath.split('/')[0];
+        document.getElementById('status-message').innerText = `Folder selected: ${folderPath}`;
+    } else {
+        alert('No files selected. Please try again.');
     }
 }
 
@@ -66,7 +89,7 @@ async function saveNewProfile(username) {
     const date = new Date().toISOString();
     const newProfile = {
         username,
-        folderPath: folderHandle.name,
+        folderPath,
         dateCreated: date,
         dateLastUpdated: date,
     };
