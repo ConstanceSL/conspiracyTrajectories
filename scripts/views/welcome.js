@@ -47,7 +47,7 @@ async function checkUserProfile() {
     }
 
     alert('New user detected. Please select the data folder.');
-    await selectDataFolder();
+    document.getElementById('select-folder-btn').classList.remove('d-none');
 }
 
 // Select Data Folder
@@ -79,41 +79,30 @@ async function createProfile() {
     };
 
     usernamesCSV.push(newProfile);
-    await saveCSVFile('usernames.csv', usernamesCSV);
+    await saveUsernamesCSV();
 
-    // Create user subfolder and placeholder files
-    await createUserSubfolder();
+    // Create user data folder in the selected local folder
+    await createUserDataFolder();
 
     alert('New user created.');
     document.getElementById('open-data-btn').classList.remove('d-none');
 }
 
-// Create User Subfolder and Placeholder Files
-async function createUserSubfolder() {
-    const subfolderHandle = await folderHandle.getDirectoryHandle(username, { create: true });
-    console.log(`Subfolder "${username}" created successfully.`);
-
-    const filesToCreate = ['notes.csv', 'annotations.csv', 'summary.txt'];
-    for (const fileName of filesToCreate) {
-        await createFile(subfolderHandle, fileName);
-    }
-}
-
-// Create a Single File
-async function createFile(folderHandle, fileName) {
+// Save `usernames.csv` in the App's Data Folder
+async function saveUsernamesCSV() {
     try {
-        const fileHandle = await folderHandle.getFileHandle(fileName, { create: true });
-        const writable = await fileHandle.createWritable();
-        await writable.write(`This is a placeholder for ${fileName}`);
-        await writable.close();
-        console.log(`${fileName} created successfully.`);
-    } catch (error) {
-        console.error(`Error creating ${fileName}:`, error);
-        alert(`Failed to create ${fileName}.`);
-    }
-}
+        const response = await fetch('./data/usernames.csv');
+        const fileHandle = await window.showSaveFilePicker({
+            suggestedName: 'usernames.csv',
+            types: [
+                {
+                    description: 'CSV file',
+                    accept: { 'text/csv': ['.csv'] },
+                },
+            ],
+        });
 
-// Open Data Tab
-function openDataTab() {
-    window.open('files-preview.html', '_blank');
-}
+        const writableStream = await fileHandle.createWritable();
+        await writableStream.write(response);
+        await writable.close();
+        console.log(`User created with data filehandle
