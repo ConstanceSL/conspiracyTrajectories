@@ -10,36 +10,34 @@ async function loadFilesPreview() {
     const urlParams = new URLSearchParams(window.location.search);
     username = urlParams.get('username'); // Get the username from the URL parameter
 
-    // Check if the username is provided
     if (!username || username.trim() === '') {
         alert('No username selected. Redirecting back to the Welcome Screen.');
-        window.location.href = 'index.html'; // Redirect to Welcome Screen
+        window.location.href = 'index.html';
         return;
     }
 
     document.getElementById('username-display').textContent = username;
 
     try {
-        // Access the user's folder and load 'users.csv'
-        await loadUserFolder();
+        // Ask user to confirm accessing the user's folder
+        await requestUserFolderAccess();
         await loadUsersCSV();
     } catch (error) {
-        console.error('Error loading users.csv:', error);
-        alert('Failed to load users.csv. Please make sure the folder structure is correct.');
+        console.error(`Error loading users.csv: ${error.message}`);
+        alert(`Failed to load users.csv for "${username}". Please check the folder structure and permissions.`);
     }
 }
 
-
-// Load the User Folder (Assuming Standard Path)
-async function loadUserFolder() {
+// Request User Folder Access
+async function requestUserFolderAccess() {
     try {
-        // Access 'Users/username/Data' directly
-        const usersFolderHandle = await navigator.storage.getDirectory();
-        userFolderHandle = await usersFolderHandle.getDirectoryHandle('Users');
-        userFolderHandle = await userFolderHandle.getDirectoryHandle(username);
+        // Ask the user to select the "Users" folder manually
+        const folderHandle = await window.showDirectoryPicker();
+        const usersFolderHandle = await folderHandle.getDirectoryHandle('Users', { create: false });
+        userFolderHandle = await usersFolderHandle.getDirectoryHandle(username);
         console.log(`User folder for "${username}" accessed successfully.`);
     } catch (error) {
-        throw new Error(`Failed to access user folder for "${username}".`);
+        throw new Error(`Failed to access user folder for "${username}". Ensure the correct folder is selected.`);
     }
 }
 
@@ -108,6 +106,3 @@ async function openTrajectoriesFile(authorName) {
         alert(`Failed to open file "${authorName}.csv".`);
     }
 }
-
-// Initialize the Files Preview Page
-document.addEventListener('DOMContentLoaded', loadFilesPreview);
