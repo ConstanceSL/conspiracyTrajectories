@@ -11,11 +11,15 @@ async function loadWelcomeScreen() {
         <h2>Welcome to the Social Media Analysis App</h2>
         <input type="text" id="username" class="form-control" placeholder="Enter your username">
         <button id="check-profile-btn" class="btn btn-primary mt-3">Check Profile</button>
+        <button id="select-folder-btn" class="btn btn-secondary mt-3 d-none">Select Data Folder</button>
+        <button id="confirm-profile-btn" class="btn btn-success mt-3 d-none">Create/Confirm Profile</button>
         <div id="status-message" class="mt-3"></div>
     `;
 
-    // Event listener for checking the profile
+    // Event listeners
     document.getElementById('check-profile-btn').addEventListener('click', checkUserProfile);
+    document.getElementById('select-folder-btn').addEventListener('click', selectDataFolder);
+    document.getElementById('confirm-profile-btn').addEventListener('click', confirmProfile);
 }
 
 // Check User Profile after entering the username
@@ -30,21 +34,14 @@ async function checkUserProfile() {
     const profile = await loadUserProfile(username);
 
     if (profile) {
-        const confirmSelection = confirm(`Profile found for ${username}. Do you want to select a data folder?`);
-        if (confirmSelection) {
-            await selectDataFolder();
-            if (folderHandle) {
-                navigateTo(loadFilesPreviewScreen);
-            }
-        }
+        alert(`Profile found for ${username}. Please select a data folder if you wish to update it.`);
+        document.getElementById('select-folder-btn').classList.remove('d-none');
+        document.getElementById('confirm-profile-btn').classList.remove('d-none');
+        folderPath = profile.folderPath;
     } else {
-        const createProfile = confirm('Profile not found. Do you want to create a new profile?');
-        if (createProfile) {
-            await selectDataFolder();
-            if (folderHandle) {
-                await saveNewProfile(username);
-            }
-        }
+        alert('Profile not found. Please enter a username and select a data folder to create a new profile.');
+        document.getElementById('select-folder-btn').classList.remove('d-none');
+        document.getElementById('confirm-profile-btn').classList.remove('d-none');
     }
 }
 
@@ -60,6 +57,35 @@ async function selectDataFolder() {
     }
 }
 
+// Confirm Profile Creation or Update
+async function confirmProfile() {
+    const username = document.getElementById('username').value.trim();
+
+    if (!username) {
+        alert('Please enter a valid username.');
+        return;
+    }
+
+    if (!folderHandle) {
+        alert('No folder selected. Please select a data folder before confirming the profile.');
+        return;
+    }
+
+    const profileExists = await loadUserProfile(username);
+
+    if (profileExists) {
+        // Update existing profile
+        profileExists.folderPath = folderPath;
+        profileExists.dateLastUpdated = new Date().toISOString();
+        alert('Profile updated successfully.');
+    } else {
+        // Create new profile
+        await saveNewProfile(username);
+    }
+
+    navigateTo(loadFilesPreviewScreen);
+}
+
 // Load User Profile from usernames.csv
 async function loadUserProfile(username) {
     const usernamesCSV = await loadCSVFile('usernames.csv');
@@ -69,11 +95,6 @@ async function loadUserProfile(username) {
 
 // Save a New Profile
 async function saveNewProfile(username) {
-    if (!folderHandle) {
-        alert('No folder selected. Please select a folder first.');
-        return;
-    }
-
     const date = new Date().toISOString();
     const newProfile = {
         username,
