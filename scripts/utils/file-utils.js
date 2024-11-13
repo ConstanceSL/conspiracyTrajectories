@@ -1,5 +1,10 @@
 // Utility function to save CSV data back to the file
 async function saveCSVFile(fileName, data) {
+    if (!folderHandle) {
+        alert('No folder selected. Please select a folder before saving.');
+        return;
+    }
+
     try {
         const fileHandle = await folderHandle.getFileHandle(fileName, { create: true });
         const writable = await fileHandle.createWritable();
@@ -9,8 +14,10 @@ async function saveCSVFile(fileName, data) {
         alert(`${fileName} saved successfully.`);
     } catch (error) {
         console.error(`Error saving ${fileName}:`, error);
-        alert(`Failed to save ${fileName}.`);
+        alert(`Failed to save ${fileName}. Please try again.`);
     }
+}
+
 }
 
 // Utility function to load a CSV file using the File System Access API or fallback
