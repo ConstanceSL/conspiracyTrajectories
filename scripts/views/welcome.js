@@ -105,14 +105,21 @@ function selectUser(username) {
     selectedButton.classList.add('active-user');
 
     // Show the "View Data" button
-    document.getElementById('view-data-btn').classList.remove('d-none');
+    const viewDataButton = document.getElementById('view-data-btn');
+    viewDataButton.classList.remove('d-none');
+
+    // Remove any previous click event listeners to avoid duplicates
+    viewDataButton.replaceWith(viewDataButton.cloneNode(true));
+    const newViewDataButton = document.getElementById('view-data-btn');
 
     // Redirect to Files Preview page with the selected username as a URL parameter
-    document.getElementById('view-data-btn').addEventListener('click', () => {
+    newViewDataButton.addEventListener('click', (event) => {
+        event.preventDefault(); // Prevent the default behavior (opening in a new tab)
         const encodedUsername = encodeURIComponent(selectedUser);
         window.location.href = `files-preview.html?username=${encodedUsername}`;
     });
 }
+
 
 // Prompt for New User Creation
 async function promptNewUser() {
