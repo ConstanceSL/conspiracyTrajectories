@@ -1,8 +1,8 @@
 // Globals
 let folderHandle = null;
-let folderPath = '';
-let usernamesCSV = [];
-let username = '';
+let usersFolderHandle = null;
+let selectedUser = '';
+let usersList = [];
 
 // Check Browser Compatibility
 function checkBrowserCompatibility() {
@@ -21,104 +21,113 @@ async function loadWelcomeScreen() {
     const appContent = document.getElementById('app-content');
     appContent.innerHTML = `
         <h2>Welcome to the Social Media Analysis App</h2>
-        <input type="text" id="username" class="form-control" placeholder="Enter your username">
-        <button id="check-profile-btn" class="btn btn-primary mt-3">Check Profile</button>
-        <button id="select-folder-btn" class="btn btn-secondary mt-3 d-none">Select Data Folder</button>
-        <button id="create-profile-btn" class="btn btn-success mt-3 d-none">Create Profile</button>
-        <button id="open-data-btn" class="btn btn-secondary mt-3 d-none">Open Data</button>
+        <button id="select-data-folder-btn" class="btn btn-primary mt-3">Select Data Folder</button>
+        <div id="user-selection" class="mt-3 d-none"></div>
         <div id="status-message" class="mt-3"></div>
     `;
 
-    // Event listeners
-    document.getElementById('check-profile-btn').addEventListener('click', checkUserProfile);
-    document.getElementById('select-folder-btn').addEventListener('click', selectDataFolder);
-    document.getElementById('create-profile-btn').addEventListener('click', createProfile);
-    document.getElementById('open-data-btn').addEventListener('click', openDataTab);
-}
-
-// Check User Profile
-async function checkUserProfile() {
-    username = document.getElementById('username').value.trim();
-
-    if (!username) {
-        alert('Please enter a valid username.');
-        return;
-    }
-
-    alert('New user detected. Please select the data folder.');
-    document.getElementById('select-folder-btn').classList.remove('d-none');
+    // Event listener
+    document.getElementById('select-data-folder-btn').addEventListener('click', selectDataFolder);
 }
 
 // Select Data Folder
 async function selectDataFolder() {
     try {
         folderHandle = await window.showDirectoryPicker();
-        folderPath = folderHandle.name;
-        document.getElementById('status-message').innerText = `Folder selected: ${folderPath}`;
-        document.getElementById('create-profile-btn').classList.remove('d-none');
+        document.getElementById('status-message').innerText = `Data folder selected: ${folderHandle.name}`;
+        await loadUsersFolder();
     } catch (error) {
         console.error('Error selecting folder:', error);
         alert('Folder selection was cancelled. Please try again.');
     }
 }
 
-// Create Profile
-async function createProfile() {
-    if (!username || !folderPath) {
-        alert('Please enter a username and select a folder first.');
+// Load Users Folder
+async function loadUsersFolder() {
+    try {
+        // Check if 'Users' folder exists, if not create it
+        usersFolderHandle = await folderHandle.getDirectoryHandle('Users', { create: true });
+        console.log('Users folder accessed.');
+
+        // Read existing user folders
+        usersList = [];
+        for await (const entry of usersFolderHandle.values()) {
+            if (entry.kind === 'directory') {
+                usersList.push(entry.name);
+            }
+        }
+
+        // Display user selection options
+        displayUserSelection();
+    } catch (error) {
+        console.error('Error loading Users folder:', error);
+        alert('Failed to access or create the Users folder.');
+    }
+}
+
+// Display User Selection
+function displayUserSelection() {
+    const userSelectionDiv = document.getElementById('user-selection');
+    userSelectionDiv.innerHTML = `
+        <h3>Select an Existing User or Create a New User</h3>
+        <ul id="user-list"></ul>
+        <button id="create-new-user-btn" class="btn btn-success mt-3">Create New User</button>
+    `;
+    userSelectionDiv.classList.remove('d-none');
+
+    // Populate user list
+    const userList = document.getElementById('user-list');
+    userList.innerHTML = usersList.map(user => `<li><button class="btn btn-link user-btn">${user}</button></li>`).join('');
+
+    // Event listeners for existing users
+    document.querySelectorAll('.user-btn').forEach(btn => {
+        btn.addEventListener('click', () => selectUser(btn.textContent));
+    });
+
+    // Event listener for creating a new user
+    document.getElementById('create-new-user-btn').addEventListener('click', promptNewUser);
+}
+
+// Select an Existing User
+function selectUser(username) {
+    selectedUser = username;
+    alert(`User "${selectedUser}" selected.`);
+    // Navigate to the next screen or load user data as needed
+}
+
+// Prompt for New User Creation
+async function promptNewUser() {
+    const newUsername = prompt('Enter a new username:');
+    if (!newUsername) {
+        alert('Invalid username. Please try again.');
         return;
     }
 
-    const date = new Date().toISOString();
-    const newProfile = {
-        username,
-        folderPath,
-        dateCreated: date,
-        dateLastUpdated: date,
-    };
-
-    usernamesCSV.push(newProfile);
-    await saveUsernamesCSV();
-
-    // Create user data folder in the selected local folder
-    await createUserDataFolder();
-
-    alert('New user created.');
-    document.getElementById('create-profile-btn').classList.add('d-none');
-    document.getElementById('open-data-btn').classList.remove('d-none');
-}
-
-// Save `usernames.csv` in the App's Data Folder
-async function saveUsernamesCSV() {
-    try {
-        const fileHandle = await getAppDataFileHandle('usernames.csv', { create: true });
-        const writable = await fileHandle.createWritable();
-        const csvContent = Papa.unparse(usernamesCSV);
-        await writable.write(csvContent);
-        await writable.close();
-    } catch (error) {
-        console.error('Error saving usernames.csv:', error);
+    if (usersList.includes(newUsername)) {
+        alert('Username already exists. Please choose a different name.');
+        return;
     }
+
+    await createNewUserFolder(newUsername);
 }
 
-// Helper function to get a handle for the App's Data Folder
-async function getAppDataFileHandle(fileName, options) {
-    const appDataFolderHandle = await navigator.storage.getDirectory();
-    return await appDataFolderHandle.getFileHandle(fileName, options);
-}
-
-// Create User Data Folder and Placeholder Files
-async function createUserDataFolder() {
+// Create New User Folder
+async function createNewUserFolder(username) {
     try {
-        const userFolderHandle = await folderHandle.getDirectoryHandle(`users/${username}`, { create: true });
-        console.log(`User folder "users/${username}" created successfully.`);
+        const userFolderHandle = await usersFolderHandle.getDirectoryHandle(username, { create: true });
+        console.log(`User folder "${username}" created successfully.`);
 
+        // Create placeholder files in the new user folder
         const filesToCreate = ['notes.csv', 'annotations.csv', 'summary.txt'];
         for (const fileName of filesToCreate) {
             await createFile(userFolderHandle, fileName);
         }
+
+        alert(`New user "${username}" created.`);
+        loadUsersFolder(); // Refresh the user list
     } catch (error) {
-        console.error('Error creating user data folder or files:', error);
+        console.error('Error creating new user folder:', error);
+        alert('Failed to create new user folder.');
     }
 }
 
@@ -132,10 +141,9 @@ async function createFile(folderHandle, fileName) {
         console.log(`${fileName} created successfully.`);
     } catch (error) {
         console.error(`Error creating ${fileName}:`, error);
+        alert(`Failed to create ${fileName}.`);
     }
 }
 
-// Open Data Tab
-function openDataTab() {
-    window.open('files-preview.html', '_blank');
-}
+// Initialize the App
+document.addEventListener('DOMContentLoaded', loadWelcomeScreen);
