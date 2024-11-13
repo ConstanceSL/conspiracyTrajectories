@@ -140,6 +140,87 @@ async function createNewUserFolder(username) {
     }
 }
 
+// Copy 'Data' Folder and 'TrajectoriesToAnalyse' Folder, Modify CSV Files
+async function copyDataFolder(userFolderHandle, username) {
+    try {
+        const dataFolderHandle = await folderHandle.getDirectoryHandle('Data');
+        const userDataFolderHandle = await userFolderHandle.getDirectoryHandle('Data', { create: true });
+
+        // Copy files from the root 'Data' folder
+        for await (const entry of dataFolderHandle.values()) {
+            if (entry.kind === 'file' && entry.name.endsWith('.csv')) {
+                await copyAndModifyCSVFile(dataFolderHandle, userDataFolderHandle, entry.name, username);
+            } else if (entry.kind === 'directory' && entry.name === 'TrajectoriesToAnalyse') {
+                // Copy 'TrajectoriesToAnalyse' folder
+                const sourceTrajectoriesHandle = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
+                const userTrajectoriesHandle = await userDataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse', { create: true });
+                await copyTrajectoriesFolder(sourceTrajectoriesHandle, userTrajectoriesHandle, username);
+            }
+        }
+
+        console.log('Data folder and TrajectoriesToAnalyse folder copied successfully.');
+    } catch (error) {
+        console.error('Error copying Data folder:', error);
+        alert('Failed to copy and modify the Data folder.');
+    }
+}
+
+// Helper Function to Copy and Modify a CSV File
+async function copyAndModifyCSVFile(sourceFolderHandle, targetFolderHandle, fileName, username) {
+    try {
+        const fileHandle = await sourceFolderHandle.getFileHandle(fileName);
+        const newFileHandle = await targetFolderHandle.getFileHandle(fileName, { create: true });
+
+        const file = await fileHandle.getFile();
+        const text = await file.text();
+        const parsedData = Papa.parse(text, { header: true });
+        const notesColumn = `Notes_${username}`;
+
+        if (!parsedData.meta.fields.includes(notesColumn)) {
+            parsedData.meta.fields.push(notesColumn);
+            parsedData.data.forEach(row => {
+                row[notesColumn] = '';
+            });
+        }
+
+        const csvContent = Papa.unparse(parsedData.data);
+        const writable = await newFileHandle.createWritable();
+        await writable.write(csvContent);
+        await writable.close();
+
+        console.log(`CSV file "${fileName}" copied and modified successfully.`);
+    } catch (error) {
+        console.error(`Error copying and modifying CSV file "${fileName}":`, error);
+    }
+}
+
+// Helper Function to Copy 'TrajectoriesToAnalyse' Folder and Modify CSV Files
+async function copyTrajectoriesFolder(sourceFolderHandle, targetFolderHandle, username) {
+    try {
+        for await (const entry of sourceFolderHandle.values()) {
+            if (entry.kind === 'file' && entry.name.endsWith('.csv')) {
+                await copyAndModifyCSVFile(sourceFolderHandle, targetFolderHandle, entry.name, username);
+            } else if (entry.kind === 'file') {
+                // Copy non-CSV files directly
+                const fileHandle = await sourceFolderHandle.getFileHandle(entry.name);
+                const newFileHandle = await targetFolderHandle.getFileHandle(entry.name, { create: true });
+                const file = await fileHandle.getFile();
+                const writable = await newFileHandle.createWritable();
+                await writable.write(await file.arrayBuffer());
+                await writable.close();
+
+                console.log(`File "${entry.name}" copied successfully.`);
+            }
+        }
+
+        console.log('TrajectoriesToAnalyse folder copied and CSV files modified successfully.');
+    } catch (error) {
+        console.error('Error copying TrajectoriesToAnalyse folder:', error);
+        alert('Failed to copy and modify the TrajectoriesToAnalyse folder.');
+    }
+}
+
+
 // Open Data Tab
 function openDataTab() {
     window.open('files-preview.html', '_blank');
