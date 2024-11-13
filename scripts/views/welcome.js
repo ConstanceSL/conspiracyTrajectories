@@ -24,10 +24,12 @@ async function loadWelcomeScreen() {
         <button id="select-data-folder-btn" class="btn btn-primary mt-3">Select Data Folder</button>
         <div id="user-selection" class="mt-3 d-none"></div>
         <div id="status-message" class="mt-3"></div>
+        <button id="view-data-btn" class="btn btn-secondary mt-3 d-none">View Data</button>
     `;
 
-    // Event listener
+    // Event listeners
     document.getElementById('select-data-folder-btn').addEventListener('click', selectDataFolder);
+    document.getElementById('view-data-btn').addEventListener('click', openDataTab);
 }
 
 // Select Data Folder
@@ -45,11 +47,9 @@ async function selectDataFolder() {
 // Load Users Folder
 async function loadUsersFolder() {
     try {
-        // Check if 'Users' folder exists, if not create it
         usersFolderHandle = await folderHandle.getDirectoryHandle('Users', { create: true });
         console.log('Users folder accessed.');
 
-        // Read existing user folders
         usersList = [];
         for await (const entry of usersFolderHandle.values()) {
             if (entry.kind === 'directory') {
@@ -57,7 +57,6 @@ async function loadUsersFolder() {
             }
         }
 
-        // Display user selection options
         displayUserSelection();
     } catch (error) {
         console.error('Error loading Users folder:', error);
@@ -75,16 +74,13 @@ function displayUserSelection() {
     `;
     userSelectionDiv.classList.remove('d-none');
 
-    // Populate user list
     const userList = document.getElementById('user-list');
     userList.innerHTML = usersList.map(user => `<li><button class="btn btn-link user-btn">${user}</button></li>`).join('');
 
-    // Event listeners for existing users
     document.querySelectorAll('.user-btn').forEach(btn => {
         btn.addEventListener('click', () => selectUser(btn.textContent));
     });
 
-    // Event listener for creating a new user
     document.getElementById('create-new-user-btn').addEventListener('click', promptNewUser);
 }
 
@@ -92,7 +88,7 @@ function displayUserSelection() {
 function selectUser(username) {
     selectedUser = username;
     alert(`User "${selectedUser}" selected.`);
-    // Navigate to the next screen or load user data as needed
+    document.getElementById('view-data-btn').classList.remove('d-none');
 }
 
 // Prompt for New User Creation
@@ -117,32 +113,57 @@ async function createNewUserFolder(username) {
         const userFolderHandle = await usersFolderHandle.getDirectoryHandle(username, { create: true });
         console.log(`User folder "${username}" created successfully.`);
 
-        // Create placeholder files in the new user folder
-        const filesToCreate = ['notes.csv', 'annotations.csv', 'summary.txt'];
-        for (const fileName of filesToCreate) {
-            await createFile(userFolderHandle, fileName);
-        }
+        // Copy 'Data' folder into the new user folder
+        await copyDataFolder(userFolderHandle, username);
 
         alert(`New user "${username}" created.`);
-        loadUsersFolder(); // Refresh the user list
+        document.getElementById('view-data-btn').classList.remove('d-none');
+        loadUsersFolder();
     } catch (error) {
         console.error('Error creating new user folder:', error);
         alert('Failed to create new user folder.');
     }
 }
 
-// Create a Single File in the User's Folder
-async function createFile(folderHandle, fileName) {
+// Copy 'Data' Folder and Modify CSV Files
+async function copyDataFolder(userFolderHandle, username) {
     try {
-        const fileHandle = await folderHandle.getFileHandle(fileName, { create: true });
-        const writable = await fileHandle.createWritable();
-        await writable.write(`This is a placeholder for ${fileName}`);
-        await writable.close();
-        console.log(`${fileName} created successfully.`);
+        const dataFolderHandle = await folderHandle.getDirectoryHandle('Data');
+        const userDataFolderHandle = await userFolderHandle.getDirectoryHandle('Data', { create: true });
+
+        for await (const entry of dataFolderHandle.values()) {
+            if (entry.kind === 'file' && entry.name.endsWith('.csv')) {
+                const fileHandle = await dataFolderHandle.getFileHandle(entry.name);
+                const newFileHandle = await userDataFolderHandle.getFileHandle(entry.name, { create: true });
+
+                // Copy file content and add Notes column
+                const file = await fileHandle.getFile();
+                const text = await file.text();
+                const parsedData = Papa.parse(text, { header: true });
+                const notesColumn = `Notes_${username}`;
+                parsedData.meta.fields.push(notesColumn);
+
+                parsedData.data.forEach(row => {
+                    row[notesColumn] = ''; // Initialize new column with empty values
+                });
+
+                const csvContent = Papa.unparse(parsedData.data);
+                const writable = await newFileHandle.createWritable();
+                await writable.write(csvContent);
+                await writable.close();
+
+                console.log(`CSV file "${entry.name}" copied and modified successfully.`);
+            }
+        }
     } catch (error) {
-        console.error(`Error creating ${fileName}:`, error);
-        alert(`Failed to create ${fileName}.`);
+        console.error('Error copying Data folder:', error);
+        alert('Failed to copy and modify the Data folder.');
     }
+}
+
+// Open Data Tab
+function openDataTab() {
+    window.open('files-preview.html', '_blank');
 }
 
 // Initialize the App
