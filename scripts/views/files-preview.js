@@ -12,14 +12,33 @@ async function loadFilesPreview() {
     document.getElementById('username-display').textContent = username;
 
     try {
-        // Access the user's Data folder and load 'users.csv'
-        const folderHandle = await window.showDirectoryPicker();
-        const usersFolderHandle = await folderHandle.getDirectoryHandle('Users');
-        const userFolderHandle = await usersFolderHandle.getDirectoryHandle(username);
+        // Access the user's folder and load 'users.csv'
+        await loadUserFolder();
+        await loadUsersCSV();
+    } catch (error) {
+        console.error('Error loading users.csv:', error);
+        alert('Failed to load users.csv. Please make sure the folder structure is correct.');
+    }
+}
+
+// Load the User Folder (Assuming Standard Path)
+async function loadUserFolder() {
+    try {
+        // Access 'Users/username/Data' directly
+        const usersFolderHandle = await navigator.storage.getDirectory();
+        const userFolderHandle = await usersFolderHandle.getDirectoryHandle('Users');
+        userFolderHandle = await userFolderHandle.getDirectoryHandle(username);
+        console.log(`User folder for "${username}" accessed successfully.`);
+    } catch (error) {
+        throw new Error(`Failed to access user folder for "${username}".`);
+    }
+}
+
+// Load 'users.csv' and Display Table
+async function loadUsersCSV() {
+    try {
         const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
         const usersCSVHandle = await dataFolderHandle.getFileHandle('users.csv');
-
-        // Load and parse 'users.csv'
         const file = await usersCSVHandle.getFile();
         const text = await file.text();
         const parsedData = Papa.parse(text, { header: true });
@@ -27,12 +46,11 @@ async function loadFilesPreview() {
         usersCSVData = parsedData.data;
         displayUsersTable(parsedData.meta.fields, parsedData.data);
     } catch (error) {
-        console.error('Error loading users.csv:', error);
-        alert('Failed to load users.csv. Please try again.');
+        throw new Error('Failed to load and parse users.csv.');
     }
 }
 
-// Display 'users.csv' Table
+// Display 'users.csv' as a Table
 function displayUsersTable(fields, data) {
     const filePreviewDiv = document.getElementById('file-preview');
     filePreviewDiv.innerHTML = `
@@ -52,7 +70,6 @@ function displayUsersTable(fields, data) {
         </tr>
     `).join('');
 
-    // Add click event to each row for file selection
     tableBody.querySelectorAll('tr').forEach(row => {
         row.addEventListener('click', () => {
             const rowIndex = row.getAttribute('data-index');
@@ -62,7 +79,7 @@ function displayUsersTable(fields, data) {
     });
 }
 
-// Open the Selected Trajectories File
+// Open File from 'TrajectoriesToAnalyse'
 async function openTrajectoriesFile(authorName) {
     try {
         const fileName = `${authorName}.csv`;
@@ -76,7 +93,6 @@ async function openTrajectoriesFile(authorName) {
 
         currentFileHandle = fileHandle;
         currentFileData = parsedData.data;
-
         displayFilePreview(parsedData.meta.fields, parsedData.data);
     } catch (error) {
         console.error(`Error opening file "${authorName}.csv":`, error);
@@ -84,7 +100,7 @@ async function openTrajectoriesFile(authorName) {
     }
 }
 
-// Display the Selected File Preview
+// Display File Preview
 function displayFilePreview(fields, data) {
     const filePreviewDiv = document.getElementById('file-preview');
     filePreviewDiv.innerHTML = `
@@ -103,11 +119,10 @@ function displayFilePreview(fields, data) {
         <tr>${fields.map(field => `<td contenteditable="${field.startsWith('Notes_')}">${row[field] || ''}</td>`).join('')}</tr>
     `).join('');
 
-    // Add event listener to save changes
     document.getElementById('save-changes-btn').addEventListener('click', saveChanges);
 }
 
-// Save Changes to the Selected File
+// Save Changes to the File
 async function saveChanges() {
     try {
         const tableBody = document.querySelector('#file-table tbody');
