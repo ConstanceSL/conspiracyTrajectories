@@ -121,21 +121,38 @@ function selectUser(username) {
     });
 }
 
-// Request User Folder Access and Store in sessionStorage
+// Request User Folder Access and Validate Folder Structure
 async function requestUserFolderAccess() {
     try {
         const baseFolderHandle = await window.showDirectoryPicker();
-        const usersFolderHandle = await baseFolderHandle.getDirectoryHandle('Users', { create: false });
-        const userFolderHandle = await usersFolderHandle.getDirectoryHandle(selectedUser);
 
-        // Store the folder handle or name in sessionStorage
+        // Check for 'Users' folder
+        if (!(await baseFolderHandle.getDirectoryHandle('Users', { create: false }))) {
+            throw new Error("The selected folder does not contain a 'Users' directory.");
+        }
+
+        const usersFolderHandle = await baseFolderHandle.getDirectoryHandle('Users', { create: false });
+
+        // Check for user's folder (selectedUser)
+        if (!(await usersFolderHandle.getDirectoryHandle(selectedUser, { create: false }))) {
+            throw new Error(`The 'Users' folder does not contain a directory for user "${selectedUser}".`);
+        }
+
+        const userFolderHandle = await usersFolderHandle.getDirectoryHandle(selectedUser, { create: false });
+
+        // Check for 'Data' folder inside user's folder
+        if (!(await userFolderHandle.getDirectoryHandle('Data', { create: false }))) {
+            throw new Error(`The user's folder does not contain a 'Data' subdirectory.`);
+        }
+
+        // Store folder information in sessionStorage
         sessionStorage.setItem('selectedUser', selectedUser);
         sessionStorage.setItem('baseFolderName', baseFolderHandle.name);
 
-        console.log(`User folder for "${selectedUser}" accessed and stored successfully.`);
+        console.log(`User folder for "${selectedUser}" accessed and validated successfully.`);
     } catch (error) {
-        console.error('Failed to access and store user folder:', error);
-        alert('Failed to access the selected user folder. Please try again.');
+        console.error('Folder structure validation failed:', error);
+        alert(`Folder structure validation failed: ${error.message}`);
     }
 }
 
