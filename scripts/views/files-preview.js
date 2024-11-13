@@ -19,47 +19,33 @@ async function loadFilesPreview() {
     document.getElementById('username-display').textContent = username;
 
     try {
-        // Request user to manually select the base data folder
-        await requestUserFolderAccess();
-        await validateFolderStructure();
+        // Directly access the user's folder based on the expected structure
+        await loadUserFolder();
         await loadUsersCSV();
     } catch (error) {
         console.error(`Error loading users.csv: ${error.message}`);
-        alert(`Failed to load users.csv for "${username}". Please check the folder structure and permissions.`);
+        alert(`Failed to load users.csv for "${username}". Please check the folder structure.`);
     }
 }
 
-// Request User Folder Access
-async function requestUserFolderAccess() {
+// Directly Access the User Folder
+async function loadUserFolder() {
     try {
-        // Let the user select the base folder (e.g., the root folder containing 'Users')
-        const baseFolderHandle = await window.showDirectoryPicker();
-        const usersFolderHandle = await baseFolderHandle.getDirectoryHandle('Users', { create: false });
-
-        // Access the specific user's folder
-        userFolderHandle = await usersFolderHandle.getDirectoryHandle(username, { create: false });
+        // Access the user's folder using the assumed path 'Users/<username>/Data'
+        const usersFolderHandle = await navigator.storage.getDirectory();
+        const userFolderHandle = await usersFolderHandle.getDirectoryHandle('Users');
+        userFolderHandle = await userFolderHandle.getDirectoryHandle(username);
+        userFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
         console.log(`User folder for "${username}" accessed successfully.`);
     } catch (error) {
-        throw new Error(`Failed to access user folder for "${username}". Ensure the correct folder is selected.`);
-    }
-}
-
-// Validate Folder Structure
-async function validateFolderStructure() {
-    try {
-        // Check if 'Data' folder exists inside the user's folder
-        await userFolderHandle.getDirectoryHandle('Data', { create: false });
-        console.log(`Data folder for user "${username}" found successfully.`);
-    } catch (error) {
-        throw new Error(`The 'Data' folder is missing for user "${username}". Ensure the correct folder structure.`);
+        throw new Error(`Failed to access user folder for "${username}". Ensure the folder structure is correct.`);
     }
 }
 
 // Load and Parse 'users.csv'
 async function loadUsersCSV() {
     try {
-        const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
-        const usersCSVHandle = await dataFolderHandle.getFileHandle('users.csv', { create: false });
+        const usersCSVHandle = await userFolderHandle.getFileHandle('users.csv');
         const file = await usersCSVHandle.getFile();
         const text = await file.text();
         const parsedData = Papa.parse(text, { header: true });
@@ -71,7 +57,6 @@ async function loadUsersCSV() {
         }
 
         usersCSVData = parsedData.data;
-        console.log('Parsed users.csv data:', usersCSVData);
         displayUsersTable(parsedData.meta.fields, parsedData.data);
     } catch (error) {
         throw new Error('Failed to load and parse users.csv.');
