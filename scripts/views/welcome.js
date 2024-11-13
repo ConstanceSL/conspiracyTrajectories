@@ -33,27 +33,28 @@ async function checkUserProfile() {
         return;
     }
 
-    // Display folder selection input
     document.getElementById('folder-instruction').classList.remove('d-none');
     await selectDataFolder();
 }
 
 // Select Data Folder with Fallback
 async function selectDataFolder() {
-    if (window.showDirectoryPicker) {
-        try {
+    try {
+        if (window.showDirectoryPicker) {
+            // Use modern API if supported
             folderHandle = await window.showDirectoryPicker();
             folderPath = folderHandle.name;
             document.getElementById('status-message').innerText = `Folder selected: ${folderPath}`;
             document.getElementById('create-profile-btn').classList.remove('d-none');
-        } catch (error) {
-            console.error('Folder selection cancelled:', error);
-            alert('Folder selection was cancelled. Please try again.');
+        } else {
+            // Fallback for unsupported browsers
+            const fileInput = document.getElementById('file-input');
+            fileInput.classList.remove('d-none');
+            fileInput.addEventListener('change', handleFileInput);
         }
-    } else {
-        const fileInput = document.getElementById('file-input');
-        fileInput.classList.remove('d-none');
-        fileInput.addEventListener('change', handleFileInput);
+    } catch (error) {
+        console.error('Error selecting folder:', error);
+        alert('Folder selection was cancelled. Please try again.');
     }
 }
 
@@ -62,6 +63,7 @@ function handleFileInput(event) {
     const files = event.target.files;
     if (files.length > 0) {
         folderPath = files[0].webkitRelativePath.split('/')[0];
+        folderHandle = { name: folderPath }; // Simulate folderHandle for fallback
         document.getElementById('status-message').innerText = `Folder selected: ${folderPath}`;
         document.getElementById('create-profile-btn').classList.remove('d-none');
     } else {
@@ -73,8 +75,13 @@ function handleFileInput(event) {
 async function createProfile() {
     const username = document.getElementById('username').value.trim();
 
-    if (!username || !folderPath) {
-        alert('Please enter a username and select a folder first.');
+    if (!username) {
+        alert('Please enter a valid username.');
+        return;
+    }
+
+    if (!folderHandle) {
+        alert('No folder selected. Please select a folder before saving the profile.');
         return;
     }
 
@@ -89,7 +96,7 @@ async function createProfile() {
     usernamesCSV.push(newProfile);
     await saveCSVFile('usernames.csv', usernamesCSV);
 
-    // Placeholder: Create additional files
+    // Create placeholder files
     await createPlaceholderFiles();
 
     alert('Profile created successfully.');
