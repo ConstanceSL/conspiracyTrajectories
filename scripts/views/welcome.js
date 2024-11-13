@@ -47,9 +47,15 @@ async function selectDataFolder() {
 // Load Users Folder
 async function loadUsersFolder() {
     try {
-        usersFolderHandle = await folderHandle.getDirectoryHandle('Users', { create: true });
+        // Check if 'Users' folder exists
+        usersFolderHandle = await folderHandle.getDirectoryHandle('Users');
         console.log('Users folder accessed.');
 
+        // Check if 'Data' folder exists
+        const dataFolderHandle = await folderHandle.getDirectoryHandle('Data');
+        console.log('Data folder accessed.');
+
+        // Read existing user folders
         usersList = [];
         for await (const entry of usersFolderHandle.values()) {
             if (entry.kind === 'directory') {
@@ -57,10 +63,15 @@ async function loadUsersFolder() {
             }
         }
 
-        displayUserSelection();
+        if (usersList.length === 0) {
+            alert('No users found. Please create a new user.');
+        } else {
+            displayUserSelection();
+        }
     } catch (error) {
-        console.error('Error loading Users folder:', error);
-        alert('Failed to access or create the Users folder.');
+        console.error('Error accessing Users or Data folder:', error);
+        alert('The selected folder does not contain the required "Users" or "Data" subfolders. Please choose the correct folder.');
+        await selectDataFolder(); // Retry folder selection
     }
 }
 
@@ -75,7 +86,7 @@ function displayUserSelection() {
     userSelectionDiv.classList.remove('d-none');
 
     const userList = document.getElementById('user-list');
-    userList.innerHTML = usersList.map(user => `<li><button class="btn btn-link user-btn">${user}</button></li>`).join('');
+    userList.innerHTML = usersList.map(user => `<li><button class="btn btn-link user-btn" id="user-btn-${user}">${user}</button></li>`).join('');
 
     document.querySelectorAll('.user-btn').forEach(btn => {
         btn.addEventListener('click', () => selectUser(btn.textContent));
@@ -84,9 +95,17 @@ function displayUserSelection() {
     document.getElementById('create-new-user-btn').addEventListener('click', promptNewUser);
 }
 
-// Select an Existing User
+// Select an Existing User and Highlight It
 function selectUser(username) {
     selectedUser = username;
+
+    // Highlight the selected user
+    document.querySelectorAll('.user-btn').forEach(btn => {
+        btn.classList.remove('active-user');
+    });
+    const selectedButton = document.getElementById(`user-btn-${username}`);
+    selectedButton.classList.add('active-user');
+
     alert(`User "${selectedUser}" selected.`);
     document.getElementById('view-data-btn').classList.remove('d-none');
 }
@@ -117,47 +136,10 @@ async function createNewUserFolder(username) {
         await copyDataFolder(userFolderHandle, username);
 
         alert(`New user "${username}" created.`);
-        document.getElementById('view-data-btn').classList.remove('d-none');
-        loadUsersFolder();
+        loadUsersFolder(); // Refresh the user list
     } catch (error) {
         console.error('Error creating new user folder:', error);
         alert('Failed to create new user folder.');
-    }
-}
-
-// Copy 'Data' Folder and Modify CSV Files
-async function copyDataFolder(userFolderHandle, username) {
-    try {
-        const dataFolderHandle = await folderHandle.getDirectoryHandle('Data');
-        const userDataFolderHandle = await userFolderHandle.getDirectoryHandle('Data', { create: true });
-
-        for await (const entry of dataFolderHandle.values()) {
-            if (entry.kind === 'file' && entry.name.endsWith('.csv')) {
-                const fileHandle = await dataFolderHandle.getFileHandle(entry.name);
-                const newFileHandle = await userDataFolderHandle.getFileHandle(entry.name, { create: true });
-
-                // Copy file content and add Notes column
-                const file = await fileHandle.getFile();
-                const text = await file.text();
-                const parsedData = Papa.parse(text, { header: true });
-                const notesColumn = `Notes_${username}`;
-                parsedData.meta.fields.push(notesColumn);
-
-                parsedData.data.forEach(row => {
-                    row[notesColumn] = ''; // Initialize new column with empty values
-                });
-
-                const csvContent = Papa.unparse(parsedData.data);
-                const writable = await newFileHandle.createWritable();
-                await writable.write(csvContent);
-                await writable.close();
-
-                console.log(`CSV file "${entry.name}" copied and modified successfully.`);
-            }
-        }
-    } catch (error) {
-        console.error('Error copying Data folder:', error);
-        alert('Failed to copy and modify the Data folder.');
     }
 }
 
@@ -165,6 +147,17 @@ async function copyDataFolder(userFolderHandle, username) {
 function openDataTab() {
     window.open('files-preview.html', '_blank');
 }
+
+// CSS for Highlighting Selected User (Add this in your CSS file or style block)
+const style = document.createElement('style');
+style.innerHTML = `
+    .active-user {
+        background-color: #007bff;
+        color: white;
+        font-weight: bold;
+    }
+`;
+document.head.appendChild(style);
 
 // Initialize the App
 document.addEventListener('DOMContentLoaded', loadWelcomeScreen);
