@@ -1,8 +1,6 @@
 // Globals
 let folderHandle = null;
 let folderPath = '';
-let usernamesCSV = [];
-let currentProfile = null;
 
 // Welcome Screen
 async function loadWelcomeScreen() {
@@ -12,7 +10,8 @@ async function loadWelcomeScreen() {
         <input type="text" id="username" class="form-control" placeholder="Enter your username">
         <button id="check-profile-btn" class="btn btn-primary mt-3">Check Profile</button>
         <button id="select-folder-btn" class="btn btn-secondary mt-3 d-none">Select Data Folder</button>
-        <button id="confirm-profile-btn" class="btn btn-success mt-3 d-none">Create/Confirm Profile</button>
+        <input type="file" id="file-input" class="form-control d-none" webkitdirectory directory multiple>
+        <button id="confirm-profile-btn" class="btn btn-success mt-3 d-none">Confirm Profile</button>
         <div id="status-message" class="mt-3"></div>
     `;
 
@@ -31,79 +30,49 @@ async function checkUserProfile() {
         return;
     }
 
-    const profile = await loadUserProfile(username);
-
-    if (profile) {
-        alert(`Profile found for ${username}. Please select a data folder if you wish to update it.`);
-        document.getElementById('select-folder-btn').classList.remove('d-none');
-        document.getElementById('confirm-profile-btn').classList.remove('d-none');
-        folderPath = profile.folderPath;
-    } else {
-        alert('Profile not found. Please enter a username and select a data folder to create a new profile.');
-        document.getElementById('select-folder-btn').classList.remove('d-none');
-        document.getElementById('confirm-profile-btn').classList.remove('d-none');
-    }
+    alert(`Username entered: ${username}. Please select a data folder.`);
+    document.getElementById('select-folder-btn').classList.remove('d-none');
+    document.getElementById('confirm-profile-btn').classList.remove('d-none');
 }
 
-// Select Data Folder using the File System Access API
+// Select Data Folder with Fallback
 async function selectDataFolder() {
-    try {
-        folderHandle = await window.showDirectoryPicker();
-        folderPath = folderHandle.name;
-        document.getElementById('status-message').innerText = `Folder selected: ${folderPath}`;
-    } catch (error) {
-        console.error('Folder selection cancelled:', error);
-        alert('Folder selection was cancelled. Please select a valid folder.');
-    }
-}
-
-// Confirm Profile Creation or Update
-async function confirmProfile() {
-    const username = document.getElementById('username').value.trim();
-
-    if (!username) {
-        alert('Please enter a valid username.');
-        return;
-    }
-
-    if (!folderHandle) {
-        alert('No folder selected. Please select a data folder before confirming the profile.');
-        return;
-    }
-
-    const profileExists = await loadUserProfile(username);
-
-    if (profileExists) {
-        // Update existing profile
-        profileExists.folderPath = folderPath;
-        profileExists.dateLastUpdated = new Date().toISOString();
-        alert('Profile updated successfully.');
+    if (window.showDirectoryPicker) {
+        // Modern API is supported
+        try {
+            folderHandle = await window.showDirectoryPicker();
+            folderPath = folderHandle.name;
+            document.getElementById('status-message').innerText = `Folder selected: ${folderPath}`;
+        } catch (error) {
+            console.error('Folder selection cancelled:', error);
+            alert('Please select a valid folder.');
+        }
     } else {
-        // Create new profile
-        await saveNewProfile(username);
+        // Fallback for browsers that do not support showDirectoryPicker (e.g., Firefox)
+        alert('Your browser does not support folder selection. Please select a file from the data folder instead.');
+        const fileInput = document.getElementById('file-input');
+        fileInput.classList.remove('d-none');
+        fileInput.addEventListener('change', handleFileInput);
+    }
+}
+
+// Handle File Input Fallback
+function handleFileInput(event) {
+    const files = event.target.files;
+    if (files.length > 0) {
+        folderPath = files[0].webkitRelativePath.split('/')[0];
+        document.getElementById('status-message').innerText = `Folder selected: ${folderPath}`;
+    } else {
+        alert('No files selected. Please try again.');
+    }
+}
+
+// Confirm Profile Creation
+function confirmProfile() {
+    if (!folderPath) {
+        alert('No folder selected. Please select a folder before confirming the profile.');
+        return;
     }
 
-    navigateTo(loadFilesPreviewScreen);
-}
-
-// Load User Profile from usernames.csv
-async function loadUserProfile(username) {
-    const usernamesCSV = await loadCSVFile('usernames.csv');
-    const lowerCaseUsername = username.toLowerCase();
-    return usernamesCSV.find(profile => profile.username.toLowerCase() === lowerCaseUsername) || null;
-}
-
-// Save a New Profile
-async function saveNewProfile(username) {
-    const date = new Date().toISOString();
-    const newProfile = {
-        username,
-        folderPath,
-        dateCreated: date,
-        dateLastUpdated: date,
-    };
-
-    usernamesCSV.push(newProfile);
-    await saveCSVFile('usernames.csv', usernamesCSV);
-    alert('New profile created and saved successfully.');
+    alert(`Profile confirmed with folder path: ${folderPath}`);
 }
