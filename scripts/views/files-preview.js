@@ -19,8 +19,9 @@ async function loadFilesPreview() {
     document.getElementById('username-display').textContent = username;
 
     try {
-        // Request folder access and load 'users.csv'
+        // Request user to manually select the base data folder
         await requestUserFolderAccess();
+        await validateFolderStructure();
         await loadUsersCSV();
     } catch (error) {
         console.error(`Error loading users.csv: ${error.message}`);
@@ -31,12 +32,26 @@ async function loadFilesPreview() {
 // Request User Folder Access
 async function requestUserFolderAccess() {
     try {
-        const folderHandle = await window.showDirectoryPicker();
-        const usersFolderHandle = await folderHandle.getDirectoryHandle('Users', { create: false });
-        userFolderHandle = await usersFolderHandle.getDirectoryHandle(username);
+        // Let the user select the base folder (e.g., the root folder containing 'Users')
+        const baseFolderHandle = await window.showDirectoryPicker();
+        const usersFolderHandle = await baseFolderHandle.getDirectoryHandle('Users', { create: false });
+
+        // Access the specific user's folder
+        userFolderHandle = await usersFolderHandle.getDirectoryHandle(username, { create: false });
         console.log(`User folder for "${username}" accessed successfully.`);
     } catch (error) {
         throw new Error(`Failed to access user folder for "${username}". Ensure the correct folder is selected.`);
+    }
+}
+
+// Validate Folder Structure
+async function validateFolderStructure() {
+    try {
+        // Check if 'Data' folder exists inside the user's folder
+        await userFolderHandle.getDirectoryHandle('Data', { create: false });
+        console.log(`Data folder for user "${username}" found successfully.`);
+    } catch (error) {
+        throw new Error(`The 'Data' folder is missing for user "${username}". Ensure the correct folder structure.`);
     }
 }
 
@@ -44,7 +59,7 @@ async function requestUserFolderAccess() {
 async function loadUsersCSV() {
     try {
         const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
-        const usersCSVHandle = await dataFolderHandle.getFileHandle('users.csv');
+        const usersCSVHandle = await dataFolderHandle.getFileHandle('users.csv', { create: false });
         const file = await usersCSVHandle.getFile();
         const text = await file.text();
         const parsedData = Papa.parse(text, { header: true });
