@@ -286,6 +286,11 @@ async function copyTrajectoriesFolder(sourceFolderHandle, targetFolderHandle, us
 }
 
 
+// Open Data Tab
+function openDataTab() {
+    window.open('files-preview.html', '_blank');
+}
+
 // CSS for Highlighting Selected User
 const style = document.createElement('style');
 style.innerHTML = `
