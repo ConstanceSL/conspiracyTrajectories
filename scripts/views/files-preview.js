@@ -73,7 +73,7 @@ async function loadUsersCSV() {
     }
 }
 
-// Display 'users.csv' as a Table
+// Display 'users.csv' as a Table with Enhanced Debugging
 function displayUsersTable(fields, data) {
     const filePreviewDiv = document.getElementById('file-preview');
 
@@ -89,23 +89,28 @@ function displayUsersTable(fields, data) {
         return;
     }
 
+    // Log the fields and data for debugging
     console.log('Fields:', fields);
     console.log('Data:', data);
 
-    // Generate HTML table
-    filePreviewDiv.innerHTML = `
+    // Generate the HTML table
+    let tableHTML = `
         <h3>Users CSV Data</h3>
         <table id="users-table" class="table table-striped">
             <thead>
                 <tr>${fields.map(field => `<th>${field}</th>`).join('')}</tr>
             </thead>
             <tbody>
-                ${data.map(row => `
-                    <tr>${fields.map(field => `<td>${row[field] || ''}</td>`).join('')}</tr>
-                `).join('')}
-            </tbody>
-        </table>
     `;
 
+    // Loop through data and add rows
+    for (let row of data) {
+        tableHTML += `<tr>${fields.map(field => `<td>${row[field] || ''}</td>`).join('')}</tr>`;
+    }
+
+    tableHTML += `</tbody></table>`;
+
+    // Display the table
+    filePreviewDiv.innerHTML = tableHTML;
     console.log('Table rendered successfully.');
 }
