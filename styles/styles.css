@@ -62,3 +62,8 @@ h2 {
     color: white;
     font-weight: bold;
 }
+.table {
+    display: table !important;
+    visibility: visible !important;
+    color: #000 !important;
+}

@@ -2,16 +2,14 @@
 let userFolderHandle = null;
 let username = '';
 let usersCSVData = [];
-let currentFileHandle = null;
-let currentFileData = [];
 
 // Initialize Files Preview Page
 async function loadFilesPreview() {
-    username = sessionStorage.getItem('selectedUser'); // Get the stored username
-    const baseFolderName = sessionStorage.getItem('baseFolderName'); // Get the stored folder name
+    const urlParams = new URLSearchParams(window.location.search);
+    username = urlParams.get('username');
 
-    if (!username || !baseFolderName) {
-        alert('No username or folder selected. Redirecting back to the Welcome Screen.');
+    if (!username) {
+        alert('No username selected. Redirecting back to the Welcome Screen.');
         window.location.href = 'index.html';
         return;
     }
@@ -19,43 +17,34 @@ async function loadFilesPreview() {
     document.getElementById('username-display').textContent = username;
 
     try {
-        // Directly access the stored folder
-        await accessUserFolder(baseFolderName);
         await loadUsersCSV();
     } catch (error) {
-        console.error(`Error loading users.csv: ${error.message}`);
-        alert(`Failed to load users.csv for "${username}". Please check the folder structure.`);
+        console.error('Error loading users.csv:', error);
+        alert('Failed to load users.csv.');
     }
 }
 
-// Access User Folder from Stored Information
-async function accessUserFolder(baseFolderName) {
-    try {
-        const baseFolderHandle = await navigator.storage.getDirectory();
-        const usersFolderHandle = await baseFolderHandle.getDirectoryHandle('Users');
-        userFolderHandle = await usersFolderHandle.getDirectoryHandle(username);
-        console.log(`User folder for "${username}" accessed successfully from sessionStorage.`);
-    } catch (error) {
-        throw new Error(`Failed to access user folder for "${username}". Ensure the folder structure is correct.`);
-    }
-}
-
-// Load and Parse 'users.csv'
+// Load and Parse 'users.csv' with Enhanced Debugging
 async function loadUsersCSV() {
     try {
         const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
         const usersCSVHandle = await dataFolderHandle.getFileHandle('users.csv');
         const file = await usersCSVHandle.getFile();
         const text = await file.text();
-        const parsedData = Papa.parse(text, { header: true });
 
-        // Log the raw text and parsed data for debugging
         console.log('Raw CSV Text:', text);
+
+        const parsedData = Papa.parse(text, {
+            header: true,
+            skipEmptyLines: true,
+            dynamicTyping: true,
+        });
+
         console.log('Parsed CSV Data:', parsedData);
 
         if (parsedData.errors.length > 0) {
             console.error('CSV Parsing Errors:', parsedData.errors);
-            alert('There were errors parsing users.csv. Please check the file format.');
+            alert('CSV parsing failed. Please check the format of users.csv.');
             return;
         }
 
@@ -73,9 +62,15 @@ async function loadUsersCSV() {
     }
 }
 
-// Display 'users.csv' as a Table with Enhanced Debugging
+// Display 'users.csv' as a Table with Debugging
 function displayUsersTable(fields, data) {
     const filePreviewDiv = document.getElementById('file-preview');
+
+    if (!filePreviewDiv) {
+        console.error('Table container "file-preview" not found.');
+        alert('Failed to find the table container.');
+        return;
+    }
 
     if (!fields || fields.length === 0) {
         console.error('No fields found in CSV data.');
@@ -89,11 +84,9 @@ function displayUsersTable(fields, data) {
         return;
     }
 
-    // Log the fields and data for debugging
     console.log('Fields:', fields);
     console.log('Data:', data);
 
-    // Generate the HTML table
     let tableHTML = `
         <h3>Users CSV Data</h3>
         <table id="users-table" class="table table-striped">
@@ -103,14 +96,15 @@ function displayUsersTable(fields, data) {
             <tbody>
     `;
 
-    // Loop through data and add rows
     for (let row of data) {
         tableHTML += `<tr>${fields.map(field => `<td>${row[field] || ''}</td>`).join('')}</tr>`;
     }
 
     tableHTML += `</tbody></table>`;
 
-    // Display the table
     filePreviewDiv.innerHTML = tableHTML;
     console.log('Table rendered successfully.');
 }
+
+// Initialize the Files Preview Page
+document.addEventListener('DOMContentLoaded', loadFilesPreview);
