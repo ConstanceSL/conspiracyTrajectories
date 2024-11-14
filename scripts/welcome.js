@@ -877,6 +877,15 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">Content Preview</h5>
                         <div>
+                            ${(() => {
+                                const url = rowData.url || '';
+                                const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+                                return url !== rowData.permalink && !isImage ? `
+                                    <a href="${url}" class="btn btn-primary btn-sm me-2" target="_blank">
+                                        Linked content
+                                    </a>
+                                ` : '';
+                            })()}
                             <a href="${rowData.permalink}" class="btn btn-success btn-sm" target="_blank">
                                 Open in Reddit
                             </a>
@@ -899,7 +908,7 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                             if (urls.length > 0) {
                                 content += `<div class="mb-3">`;
                                 urls.forEach((url, index) => {
-                                    const buttonText = urls.length > 1 ? `Linked content ${index + 1}` : 'Linked content';
+                                    const buttonText = urls.length > 1 ? `Linked content ${index + 1}` : 'Open text link';
                                     content += `
                                         <a href="${url}" class="btn btn-primary btn-sm me-2 mb-2" target="_blank">
                                             ${buttonText}
