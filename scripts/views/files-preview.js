@@ -49,15 +49,63 @@ async function loadUsersCSV() {
         const text = await file.text();
         const parsedData = Papa.parse(text, { header: true });
 
+        // Log the raw text and parsed data for debugging
+        console.log('Raw CSV Text:', text);
+        console.log('Parsed CSV Data:', parsedData);
+
         if (parsedData.errors.length > 0) {
             console.error('CSV Parsing Errors:', parsedData.errors);
             alert('There were errors parsing users.csv. Please check the file format.');
             return;
         }
 
+        if (!parsedData.data || parsedData.data.length === 0) {
+            console.error('Parsed data is empty.');
+            alert('No data found in users.csv.');
+            return;
+        }
+
         usersCSVData = parsedData.data;
         displayUsersTable(parsedData.meta.fields, parsedData.data);
     } catch (error) {
-        throw new Error('Failed to load and parse users.csv.');
+        console.error('Error loading and parsing users.csv:', error);
+        alert('Failed to load and parse users.csv.');
     }
+}
+
+// Display 'users.csv' as a Table
+function displayUsersTable(fields, data) {
+    const filePreviewDiv = document.getElementById('file-preview');
+
+    if (!fields || fields.length === 0) {
+        console.error('No fields found in CSV data.');
+        alert('No columns found in users.csv.');
+        return;
+    }
+
+    if (!data || data.length === 0) {
+        console.error('No rows found in CSV data.');
+        alert('No rows found in users.csv.');
+        return;
+    }
+
+    console.log('Fields:', fields);
+    console.log('Data:', data);
+
+    // Generate HTML table
+    filePreviewDiv.innerHTML = `
+        <h3>Users CSV Data</h3>
+        <table id="users-table" class="table table-striped">
+            <thead>
+                <tr>${fields.map(field => `<th>${field}</th>`).join('')}</tr>
+            </thead>
+            <tbody>
+                ${data.map(row => `
+                    <tr>${fields.map(field => `<td>${row[field] || ''}</td>`).join('')}</tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+
+    console.log('Table rendered successfully.');
 }
