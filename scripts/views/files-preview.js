@@ -28,13 +28,22 @@ async function loadFilesPreview() {
     }
 }
 
-// Access User Folder from Stored Information
-async function accessUserFolder(baseFolderName) {
+// Access User Folder Using Folder Picker
+async function accessUserFolder() {
     try {
-        const baseFolderHandle = await navigator.storage.getDirectory();
-        const usersFolderHandle = await baseFolderHandle.getDirectoryHandle('Users');
-        userFolderHandle = await usersFolderHandle.getDirectoryHandle(username);
-        console.log(`User folder for "${username}" accessed successfully from sessionStorage.`);
+        // Re-request the user to select the base folder
+        const baseFolderHandle = await window.showDirectoryPicker();
+
+        // Check if the selected folder contains 'Users' subdirectory
+        const usersFolderHandle = await baseFolderHandle.getDirectoryHandle('Users', { create: false });
+        const userFolderHandle = await usersFolderHandle.getDirectoryHandle(username, { create: false });
+
+        // Check if the user folder contains 'Data' subdirectory
+        await userFolderHandle.getDirectoryHandle('Data', { create: false });
+
+        // Store the user folder handle for further access
+        userFolderHandle = userFolderHandle;
+        console.log(`User folder for "${username}" accessed successfully.`);
     } catch (error) {
         throw new Error(`Failed to access user folder for "${username}". Ensure the folder structure is correct.`);
     }

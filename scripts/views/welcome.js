@@ -121,49 +121,22 @@ function selectUser(username) {
     });
 }
 
-// Request User Folder Access and Store Folder Path in sessionStorage
+// Request User Folder Access and Store in sessionStorage
 async function requestUserFolderAccess() {
     try {
         const baseFolderHandle = await window.showDirectoryPicker();
-
-        // Check for 'Users' folder
         const usersFolderHandle = await baseFolderHandle.getDirectoryHandle('Users', { create: false });
         const userFolderHandle = await usersFolderHandle.getDirectoryHandle(selectedUser);
 
-        // Check for 'Data' folder inside user's folder
-        const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data', { create: false });
-
-        // Store the folder path in sessionStorage (store base folder name and username)
-        sessionStorage.setItem('baseFolderName', baseFolderHandle.name);
+        // Store the folder handle or name in sessionStorage
         sessionStorage.setItem('selectedUser', selectedUser);
+        sessionStorage.setItem('baseFolderName', baseFolderHandle.name);
 
-        console.log(`User folder for "${selectedUser}" accessed and path stored successfully.`);
+        console.log(`User folder for "${selectedUser}" accessed and stored successfully.`);
     } catch (error) {
-        console.error('Failed to access and store user folder path:', error);
+        console.error('Failed to access and store user folder:', error);
         alert('Failed to access the selected user folder. Please try again.');
     }
-}
-
-// Select User and Redirect to Files Preview Page
-function selectUser(username) {
-    selectedUser = username;
-
-    // Highlight the selected user
-    document.querySelectorAll('.user-btn').forEach(btn => {
-        btn.classList.remove('active-user');
-    });
-    const selectedButton = document.getElementById(`user-btn-${username}`);
-    selectedButton.classList.add('active-user');
-
-    // Show the "View Data" button
-    const viewDataButton = document.getElementById('view-data-btn');
-    viewDataButton.classList.remove('d-none');
-
-    viewDataButton.addEventListener('click', async (event) => {
-        event.preventDefault();
-        await requestUserFolderAccess(); // Ensure folder path is stored
-        window.location.href = `files-preview.html?username=${encodeURIComponent(selectedUser)}`;
-    });
 }
 
 
