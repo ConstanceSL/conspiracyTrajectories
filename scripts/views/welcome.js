@@ -29,7 +29,6 @@ async function loadWelcomeScreen() {
 
     // Event listeners
     document.getElementById('select-data-folder-btn').addEventListener('click', selectDataFolder);
-    document.getElementById('view-data-btn').addEventListener('click', openDataTab);
 }
 
 // Select Data Folder
