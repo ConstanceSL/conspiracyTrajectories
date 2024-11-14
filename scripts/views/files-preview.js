@@ -7,11 +7,10 @@ let currentFileData = [];
 
 // Initialize Files Preview Page
 async function loadFilesPreview() {
-    username = sessionStorage.getItem('selectedUser'); // Get the stored username
-    const baseFolderName = sessionStorage.getItem('baseFolderName'); // Get the stored folder name
+    username = sessionStorage.getItem('selectedUser');
 
-    if (!username || !baseFolderName) {
-        alert('No username or folder selected. Redirecting back to the Welcome Screen.');
+    if (!username) {
+        alert('No username selected. Redirecting back to the Welcome Screen.');
         window.location.href = 'index.html';
         return;
     }
@@ -19,14 +18,15 @@ async function loadFilesPreview() {
     document.getElementById('username-display').textContent = username;
 
     try {
-        // Directly access the stored folder
-        await accessUserFolder(baseFolderName);
+        // Request folder access from the user
+        await accessUserFolder();
         await loadUsersCSV();
     } catch (error) {
         console.error(`Error loading users.csv: ${error.message}`);
         alert(`Failed to load users.csv for "${username}". Please check the folder structure.`);
     }
 }
+
 
 // Access User Folder Using Folder Picker
 async function accessUserFolder() {
