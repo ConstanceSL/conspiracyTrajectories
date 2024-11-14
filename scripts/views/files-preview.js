@@ -5,47 +5,104 @@ let usersCSVData = [];
 let currentFileHandle = null;
 let currentFileData = [];
 
-// Initialize Files Preview Page
-async function loadFilesPreview() {
-    username = sessionStorage.getItem('selectedUser');
 
+document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    username = urlParams.get('username'); // Assign to global username variable
+    console.log('Received username:', username);
+
+    // Optional: Display the username in the UI
+    const usernameDisplay = document.getElementById('username-display');
+    if (usernameDisplay) {
+        usernameDisplay.textContent = username;
+    }
+
+    // Since username is now set, we can proceed with loading the files
+    loadFilesPreview(); // Call this after setting the username
+});
+
+
+// Initialize Files Preview Page
+// ... existing code ...
+
+async function loadFilesPreview() {
     if (!username) {
         alert('No username selected. Redirecting back to the Welcome Screen.');
         window.location.href = 'index.html';
         return;
     }
 
-    document.getElementById('username-display').textContent = username;
+    // Create and show the folder selection button
+    const filePreviewDiv = document.getElementById('file-preview');
+    filePreviewDiv.innerHTML = `
+        <div class="text-center mb-4">
+            <button id="selectFolderBtn" class="btn btn-primary">
+                Select Data Folder
+            </button>
+        </div>
+    `;
 
-    try {
-        // Request folder access from the user
-        await accessUserFolder();
-        await loadUsersCSV();
-    } catch (error) {
-        console.error(`Error loading users.csv: ${error.message}`);
-        alert(`Failed to load users.csv for "${username}". Please check the folder structure.`);
-    }
+    // Add click handler for the button
+    document.getElementById('selectFolderBtn').addEventListener('click', async () => {
+        try {
+            await accessUserFolder();
+            await loadUsersCSV();
+        } catch (error) {
+            if (error.name === 'NotFoundError') {
+                console.error('Folder structure error:', error.message);
+                alert(`Folder structure error: ${error.message}\nPlease verify that your folder contains:\n- Users/\n  - ${username}/\n    - Data/`);
+            } 
+            else if (error.name === 'SecurityError') {
+                console.error('Permission denied:', error.message);
+                alert('Permission to access the folder was denied. Please grant access when prompted.');
+            } 
+            else {
+                console.error('Unexpected error:', error);
+                alert(`An unexpected error occurred: ${error.message}`);
+            }
+        }
+    });
 }
 
+// ... rest of the code ...
 
-// Access User Folder Using Folder Picker
 async function accessUserFolder() {
     try {
         // Re-request the user to select the base folder
         const baseFolderHandle = await window.showDirectoryPicker();
-
-        // Check if the selected folder contains 'Users' subdirectory
-        const usersFolderHandle = await baseFolderHandle.getDirectoryHandle('Users', { create: false });
-        const userFolderHandle = await usersFolderHandle.getDirectoryHandle(username, { create: false });
-
-        // Check if the user folder contains 'Data' subdirectory
-        await userFolderHandle.getDirectoryHandle('Data', { create: false });
-
-        // Store the user folder handle for further access
-        userFolderHandle = userFolderHandle;
-        console.log(`User folder for "${username}" accessed successfully.`);
+        
+        try {
+            // Try to access 'Users' directory
+            const usersFolderHandle = await baseFolderHandle.getDirectoryHandle('Users', { create: false });
+            console.log('Found Users directory');
+            
+            try {
+                // Try to access username directory
+                const userFolderHandle = await usersFolderHandle.getDirectoryHandle(username, { create: false });
+                console.log(`Found ${username} directory`);
+                
+                try {
+                    // Try to access 'Data' directory
+                    await userFolderHandle.getDirectoryHandle('Data', { create: false });
+                    console.log('Found Data directory');
+                    
+                    // Store the user folder handle for further access
+                    window.userFolderHandle = userFolderHandle;
+                    console.log(`User folder for "${username}" accessed successfully.`);
+                } catch (error) {
+                    throw new Error(`Could not find 'Data' folder inside ${username}'s directory`);
+                }
+            } catch (error) {
+                throw new Error(`Could not find folder for user "${username}" inside Users directory`);
+            }
+        } catch (error) {
+            throw new Error('Could not find Users directory in selected folder');
+        }
     } catch (error) {
-        throw new Error(`Failed to access user folder for "${username}". Ensure the folder structure is correct.`);
+        if (error.name === 'SecurityError') {
+            throw error; // Re-throw permission errors
+        }
+        throw new Error(`${error.message}. Please ensure the folder structure is correct.`);
     }
 }
 

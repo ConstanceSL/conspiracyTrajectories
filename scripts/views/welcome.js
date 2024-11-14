@@ -117,9 +117,11 @@ function selectUser(username) {
 
     // Redirect to Files Preview page with the selected username as a URL parameter
     newViewDataButton.addEventListener('click', (event) => {
-        event.preventDefault(); // Prevent the default behavior
+        event.preventDefault();
         const encodedUsername = encodeURIComponent(selectedUser);
-        window.location.href = `files-preview.html?username=${encodedUsername}`;
+        const nextPageUrl = `files-preview.html?username=${encodedUsername}`;
+        console.log('Redirecting to:', nextPageUrl); // Debug log
+        window.location.assign(nextPageUrl); // Using assign instead of href
     });
 }
 
