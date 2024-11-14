@@ -67,3 +67,11 @@ h2 {
     visibility: visible !important;
     color: #000 !important;
 }
+
+#users-table tbody tr {
+    transition: all 0.2s;
+}
+#users-table tbody tr:hover {
+    transform: scale(1.001);
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}

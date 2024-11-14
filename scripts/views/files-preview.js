@@ -23,8 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // Initialize Files Preview Page
-// ... existing code ...
-
 async function loadFilesPreview() {
     if (!username) {
         alert('No username selected. Redirecting back to the Welcome Screen.');
@@ -64,7 +62,6 @@ async function loadFilesPreview() {
     });
 }
 
-// ... rest of the code ...
 
 async function accessUserFolder() {
     try {
@@ -72,13 +69,12 @@ async function accessUserFolder() {
         const baseFolderHandle = await window.showDirectoryPicker();
         
         try {
-            // Try to access 'Users' directory
             const usersFolderHandle = await baseFolderHandle.getDirectoryHandle('Users', { create: false });
             console.log('Found Users directory');
             
             try {
                 // Try to access username directory
-                const userFolderHandle = await usersFolderHandle.getDirectoryHandle(username, { create: false });
+                userFolderHandle = await usersFolderHandle.getDirectoryHandle(username, { create: false }); // Changed this line
                 console.log(`Found ${username} directory`);
                 
                 try {
@@ -86,8 +82,7 @@ async function accessUserFolder() {
                     await userFolderHandle.getDirectoryHandle('Data', { create: false });
                     console.log('Found Data directory');
                     
-                    // Store the user folder handle for further access
-                    window.userFolderHandle = userFolderHandle;
+                    // Remove window. prefix, just use the global variable
                     console.log(`User folder for "${username}" accessed successfully.`);
                 } catch (error) {
                     throw new Error(`Could not find 'Data' folder inside ${username}'s directory`);
@@ -109,11 +104,19 @@ async function accessUserFolder() {
 // Load and Parse 'users.csv' with Enhanced Debugging
 async function loadUsersCSV() {
     try {
+        console.log('Starting to load users.csv...');
+        console.log('User folder handle:', userFolderHandle);
+        
         const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
+        console.log('Data folder accessed successfully');
+        
         const usersCSVHandle = await dataFolderHandle.getFileHandle('users.csv');
+        console.log('users.csv file handle obtained');
+        
         const file = await usersCSVHandle.getFile();
+        console.log('File object created');
+        
         const text = await file.text();
-
         console.log('Raw CSV Text:', text);
 
         const parsedData = Papa.parse(text, {
@@ -137,53 +140,96 @@ async function loadUsersCSV() {
         }
 
         usersCSVData = parsedData.data;
-        displayUsersTable(parsedData.meta.fields, parsedData.data);
+        displayUsersTable(Object.keys(parsedData.data[0]), parsedData.data);
+    
     } catch (error) {
-        console.error('Error loading and parsing users.csv:', error);
-        alert('Failed to load and parse users.csv.');
+        console.error('Detailed error in loadUsersCSV:', {
+            errorName: error.name,
+            errorMessage: error.message,
+            errorStack: error.stack
+        });
+        
+        if (error.name === 'NotFoundError') {
+            alert('Could not find users.csv in the Data folder. Please ensure the file exists.');
+        } else if (error.name === 'SecurityError') {
+            alert('Permission denied while trying to access users.csv. Please try selecting the folder again.');
+        } else {
+            alert(`Error loading users.csv: ${error.message}`);
+        }
     }
 }
 
 // Display 'users.csv' as a Table with Debugging
 function displayUsersTable(fields, data) {
     const filePreviewDiv = document.getElementById('file-preview');
-
+    
     if (!filePreviewDiv) {
         console.error('Table container "file-preview" not found.');
         alert('Failed to find the table container.');
         return;
     }
 
-    if (!fields || fields.length === 0) {
-        console.error('No fields found in CSV data.');
-        alert('No columns found in users.csv.');
-        return;
-    }
+    // Debug logging
+    console.log('Received fields:', fields);
+    console.log('Received data:', data);
 
-    if (!data || data.length === 0) {
-        console.error('No rows found in CSV data.');
-        alert('No rows found in users.csv.');
-        return;
-    }
+    // Column name mapping
+    const columnDisplayNames = {
+        'Author': 'Author',
+        'TotalPosts': 'Total posts on reddit',
+        'Conspiracy': 'Posts on r/conspiracy',
+        'DaysDifference': 'Length of activity',
+        [`Notes_${username}`]: 'Notes',
+        [`Summary_${username}`]: 'Activity'
+    };
 
-    console.log('Fields:', fields);
-    console.log('Data:', data);
-
+    // Create table HTML
     let tableHTML = `
         <h3>Users CSV Data</h3>
-        <table id="users-table" class="table table-striped">
-            <thead>
-                <tr>${fields.map(field => `<th>${field}</th>`).join('')}</tr>
-            </thead>
-            <tbody>
+        <div class="table-responsive">
+            <table id="users-table" class="table table-striped table-bordered">
+                <thead class="thead-dark">
+                    <tr>
+                        ${fields.map(field => {
+                            const displayName = columnDisplayNames[field] || field;
+                            return `<th scope="col">${displayName}</th>`;
+                        }).join('')}
+                    </tr>
+                </thead>
+                <tbody>
     `;
 
-    for (let row of data) {
-        tableHTML += `<tr>${fields.map(field => `<td>${row[field] || ''}</td>`).join('')}</tr>`;
-    }
+    // Create rows with conditional formatting
+    data.forEach(row => {
+        if (row && typeof row === 'object') {
+            // Find the Summary column for the current user
+            const summaryColumn = fields.find(field => field.startsWith('Summary_'));
+            const summaryValue = summaryColumn ? row[summaryColumn] : '';
+            
+            // Determine row color based on Summary value
+            let rowClass = '';
+            if (summaryValue === 'Done') {
+                rowClass = 'background-color: #d4edda;'; // Bootstrap success color (green)
+            } else if (summaryValue && summaryValue !== 'Done') {
+                rowClass = 'background-color: #fff3cd;'; // Bootstrap warning color (yellow)
+            }
 
-    tableHTML += `</tbody></table>`;
+            tableHTML += `<tr style="${rowClass}">`;
+            fields.forEach(field => {
+                const value = row[field];
+                tableHTML += `<td>${value !== undefined && value !== null ? value : ''}</td>`;
+            });
+            tableHTML += '</tr>';
+        }
+    });
 
+    tableHTML += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    // Update the DOM
     filePreviewDiv.innerHTML = tableHTML;
     console.log('Table rendered successfully.');
 }
