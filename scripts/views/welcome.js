@@ -109,17 +109,21 @@ function selectUser(username) {
     const viewDataButton = document.getElementById('view-data-btn');
     viewDataButton.classList.remove('d-none');
 
+    // Set sessionStorage for the selected username
+    sessionStorage.setItem('selectedUser', selectedUser);
+
     // Remove any previous click event listeners to avoid duplicates
     viewDataButton.replaceWith(viewDataButton.cloneNode(true));
     const newViewDataButton = document.getElementById('view-data-btn');
 
     // Redirect to Files Preview page with the selected username as a URL parameter
     newViewDataButton.addEventListener('click', (event) => {
-        event.preventDefault(); // Prevent the default behavior (opening in a new tab)
+        event.preventDefault(); // Prevent the default behavior
         const encodedUsername = encodeURIComponent(selectedUser);
         window.location.href = `files-preview.html?username=${encodedUsername}`;
     });
 }
+
 
 // Request User Folder Access and Store in sessionStorage
 async function requestUserFolderAccess() {
@@ -256,12 +260,6 @@ async function copyTrajectoriesFolder(sourceFolderHandle, targetFolderHandle, us
         console.error('Error copying TrajectoriesToAnalyse folder:', error);
         alert('Failed to copy and modify the TrajectoriesToAnalyse folder.');
     }
-}
-
-
-// Open Data Tab
-function openDataTab() {
-    window.open('files-preview.html', '_blank');
 }
 
 // CSS for Highlighting Selected User
