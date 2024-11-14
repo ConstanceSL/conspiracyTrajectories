@@ -7,6 +7,65 @@ let userFolderHandle = null;
 let usersCSVData = [];
 let currentFileHandle = null;
 let currentFileData = [];
+let isRestoringState = false;
+let lastViewedPost = null;
+
+
+// Function to update URL state
+function updateURLState(params = {}) {
+    // Prevent triggering hashchange when we're already restoring state
+    if (isRestoringState) return;
+    
+    const hash = new URLSearchParams();
+    if (params.user) hash.set('user', params.user);
+    if (params.author) hash.set('author', params.author);
+    if (params.row) hash.set('row', params.row);
+    window.location.hash = hash.toString();
+}
+
+// Add this function to restore state from URL
+async function restoreStateFromURL() {
+    if (isRestoringState) return;
+    
+    try {
+        isRestoringState = true;
+        const hash = new URLSearchParams(window.location.hash.slice(1));
+        const user = hash.get('user');
+        const author = hash.get('author');
+        const row = hash.get('row');
+
+        if (user && folderHandle) {
+            selectedUser = user;
+            if (author) {
+                if (row) {
+                    // Get the row data
+                    const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
+                    const trajectoriesFolderHandle = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
+                    const trajectoryFileHandle = await trajectoriesFolderHandle.getFileHandle(`${author}.csv`);
+                    const file = await trajectoryFileHandle.getFile();
+                    const content = await file.text();
+                    
+                    // Parse with the same options as displayTrajectoryFile
+                    const parsedData = Papa.parse(content, {
+                        header: true,
+                        skipEmptyLines: true,
+                        dynamicTyping: true,
+                    });
+                    
+                    if (parsedData.data[row - 1]) {
+                        await displayRowDetails(author, parseInt(row), parsedData.data[row - 1], parsedData.data);
+                    }
+                } else {
+                    await displayTrajectoryFile(author, true);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error restoring state from URL:', error);
+    } finally {
+        isRestoringState = false;
+    }
+}
 
 // Add warning before page reload/exit
 window.addEventListener('beforeunload', function (e) {
@@ -27,27 +86,59 @@ function checkBrowserCompatibility() {
     }
 }
 
+// Manage notes visibility
+function toggleUserNotes(show = true, author = null) {
+    const userNotesSection = document.getElementById('user-notes-section');
+    if (!userNotesSection) return;
+    
+    userNotesSection.style.display = show ? 'block' : 'none';
+    
+    if (show && author) {
+        const authorData = usersCSVData.find(row => row.Author === author);
+        const currentNotes = authorData ? authorData[`Notes_${selectedUser}`] || '' : '';
+        
+        userNotesSection.innerHTML = `
+            <div class="mb-4 p-3" style="background-color: #f8f9fa; border-radius: 8px;">
+                <h1 class="mb-3">Trajectory Data for ${author}</h1>
+                <div class="form-group">
+                    <label for="userNotes" class="form-label">Notes on User:</label>
+                    <textarea id="userNotes" class="form-control" rows="3">${currentNotes}</textarea>
+                </div>
+                <button class="btn btn-success mt-2" onclick="saveNotes('${author}')">
+                    Save Comments On User
+                </button>
+            </div>
+        `;
+    }
+}
+
 // Welcome Screen
 async function loadWelcomeScreen() {
     checkBrowserCompatibility();
-
+    
     const appContent = document.getElementById('app-content');
-    appContent.innerHTML = `
-        <h2>Welcome to the Social Media Analysis App</h2>
-        <button id="select-data-folder-btn" class="btn btn-primary mt-3">Select Data Folder</button>
-        <div id="user-selection" class="mt-3 d-none"></div>
-        <div id="status-message" class="mt-3"></div>
-    `;
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    const urlUser = hash.get('user');
+    
+    if (urlUser && folderHandle) {
+        // If we already have a folder handle and user in URL, proceed
+        await selectUser(urlUser, true);
+    } else {
+        // Show the initial screen with folder selection button
+        appContent.innerHTML = `
+            <h2>Welcome to the Social Media Analysis App</h2>
+            <button id="select-data-folder-btn" class="btn btn-primary mt-3">Select Data Folder</button>
+            <div id="user-selection" class="mt-3 d-none"></div>
+        `;
 
-    // Event listeners
-    document.getElementById('select-data-folder-btn').addEventListener('click', selectDataFolder);
+        document.getElementById('select-data-folder-btn').addEventListener('click', selectDataFolder);
+    }
 }
 
 // Select Data Folder
 async function selectDataFolder() {
     try {
         folderHandle = await window.showDirectoryPicker();
-        document.getElementById('status-message').innerText = `Data folder selected: ${folderHandle.name}`;
         await loadUsersFolder();
     } catch (error) {
         console.error('Error selecting folder:', error);
@@ -68,7 +159,19 @@ async function loadUsersFolder() {
             }
         }
 
-        displayUserSelection();
+        // Check if we have a user in the URL
+        const hash = new URLSearchParams(window.location.hash.slice(1));
+        const urlUser = hash.get('user');
+        
+        if (urlUser && usersList.includes(urlUser)) {
+            // If user exists in URL, directly select that user
+            console.log(`Auto-selecting user from URL: ${urlUser}`);
+            await selectUser(urlUser, true);
+        } else {
+            // Otherwise, show the normal user selection screen
+            displayUserSelection();
+        }
+        
     } catch (error) {
         console.error('Error loading Users folder:', error);
         alert('The selected folder does not contain a "Users" subfolder. Please choose the correct folder.');
@@ -247,33 +350,45 @@ async function copyTrajectoriesFolder(sourceFolderHandle, targetFolderHandle, us
 }
 
 // Select User and Initialize File Preview
-async function selectUser(username) {
-    selectedUser = username;
-
-    // Highlight the selected user
-    document.querySelectorAll('.user-btn').forEach(btn => {
-        btn.classList.remove('active-user');
-    });
-    const selectedButton = document.getElementById(`user-btn-${username}`);
-    selectedButton.classList.add('active-user');
-
-    // Set sessionStorage for the selected username
-    sessionStorage.setItem('selectedUser', selectedUser);
-
-    // Clear and initialize file preview area
-    const filePreviewDiv = document.getElementById('file-preview');
-    filePreviewDiv.innerHTML = `
-        <div class="text-center mb-4">
-            <h3>Data for user: ${selectedUser}</h3>
-        </div>
-    `;
-
-    // Directly proceed with loading the data
+async function selectUser(username, isRestoring = false) {
     try {
+        selectedUser = username;
+        if (!isRestoring) {
+            updateURLState({ user: username });
+        }
+
+         // Hide the folder selection and welcome screen elements
+        const selectDataFolderBtn = document.getElementById('select-data-folder-btn');
+        const userSelection = document.getElementById('user-selection');
+        if (selectDataFolderBtn) selectDataFolderBtn.style.display = 'none';
+        if (userSelection) userSelection.style.display = 'none';
+
+        // Set sessionStorage
+        sessionStorage.setItem('selectedUser', selectedUser);
+
+        // Access user's folder and load data
         await accessUserFolder();
         await loadUsersCSV();
+
+        // If we're restoring state and have an author parameter, load that trajectory
+        if (isRestoring) {
+            const hash = new URLSearchParams(window.location.hash.slice(1));
+            const author = hash.get('author');
+            if (author && usersCSVData && usersCSVData.length > 0) {
+                // Add a small delay to ensure everything is loaded
+                setTimeout(async () => {
+                    try {
+                        await displayTrajectoryFile(author, true);
+                    } catch (error) {
+                        console.error('Error displaying trajectory file in setTimeout:', error);
+                    }
+                }, 100);
+            }
+        }
+
     } catch (error) {
-        handleFolderAccessError(error);
+        console.error('Error in selectUser:', error);
+        alert(`Failed to select user ${username}. Please try again.`);
     }
 }
 
@@ -466,27 +581,42 @@ function displayUsersTable(fields, data) {
     console.log('Table rendered successfully.');
 }
 
-async function displayTrajectoryFile(author) {
+// Display Trajectory File
+async function displayTrajectoryFile(author, isRestoring = false) {
+    console.log('Starting displayTrajectoryFile with:', { author, isRestoring });
+    if (!isRestoring) {
+        updateURLState({ user: selectedUser, author: author });
+    }
     try {
-        // Hide the users table section
-        const appContent = document.getElementById('app-content');
-        const userSelection = document.getElementById('user-selection');
-        const statusMessage = document.getElementById('status-message');
-        
-        appContent.style.display = 'none';
-        userSelection.style.display = 'none';
-        statusMessage.style.display = 'none';
+        // Log the state of important variables
+        console.log('Current state:', {
+            selectedUser,
+            userFolderHandle: !!userFolderHandle,
+            usersCSVData: !!usersCSVData,
+            authorData: usersCSVData.find(row => row.Author === author)
+        });
+
+        toggleUserNotes(true, author); // Show notes
 
         // Get the current notes for this author from usersCSVData
         const authorData = usersCSVData.find(row => row.Author === author);
+        console.log('Author data found:', !!authorData);
         const currentNotes = authorData ? authorData[`Notes_${selectedUser}`] || '' : '';
 
+        // Log before file operations
+        console.log('About to access file handles');
+        
         // Get the file content
         const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
+        console.log('Got Data folder');
         const trajectoriesFolderHandle = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
+        console.log('Got TrajectoriesToAnalyse folder');
         const trajectoryFileHandle = await trajectoriesFolderHandle.getFileHandle(`${author}.csv`);
+        console.log('Got trajectory file handle');
         const file = await trajectoryFileHandle.getFile();
+        console.log('Got file');
         const fileContent = await file.text();
+        console.log('Got file content');
 
         // Parse CSV content
         const parsedData = Papa.parse(fileContent, {
@@ -496,8 +626,8 @@ async function displayTrajectoryFile(author) {
         });
 
         // Filter and rename columns
-        const selectedColumns = ['year', 'day_month', 'title', `Summary_${selectedUser}`];
-        const columnNames = ['#', 'col1', 'col2', 'col3', 'col4'];  // Added '#' for row numbers
+        const selectedColumns = ['year', 'day_month', 'title', `Notes_${selectedUser}`, `Summary_${selectedUser}`];
+        const columnNames = ['#', 'Year', 'Date', 'Title', 'Notes', 'Status'];  // Added '#' for row numbers
 
         // Create HTML for trajectory view with comments section
         const filePreviewDiv = document.getElementById('file-preview');
@@ -522,19 +652,27 @@ async function displayTrajectoryFile(author) {
                 }
             </style>
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h3>Trajectory Data for ${author}</h3>
-                <button class="btn btn-primary" onclick="reloadUsersTable()">
-                    ← Back to Users Table
-                </button>
-            </div>
-            <div class="mb-4">
-                <div class="form-group">
-                    <label for="userNotes" class="form-label">Notes:</label>
-                    <textarea id="userNotes" class="form-control" rows="3">${currentNotes}</textarea>
+                <p><strong>List of Posts for ${author}</strong></p></p>
+                <div class="btn-group gap-2">
+                    <button class="btn btn-primary" onclick="reloadUsersTable()">
+                        ← Back to Users Table
+                    </button>
+                    ${(() => {
+                        const hash = new URLSearchParams(window.location.hash.slice(1));
+                        const urlRow = hash.get('row');
+                        if (lastViewedPost || urlRow) {
+                            const rowNum = lastViewedPost ? lastViewedPost.rowNumber : urlRow;
+                            const rowData = lastViewedPost ? lastViewedPost.rowData : parsedData.data[urlRow - 1];
+                            return `
+                                <button class="btn btn-primary" 
+                                    onclick="displayRowDetails('${author}', ${rowNum}, ${JSON.stringify(rowData).replace(/"/g, '&quot;')})">
+                                    Return to Row ${rowNum} →
+                                </button>
+                            `;
+                        }
+                         return '';
+                    })()}
                 </div>
-                <button class="btn btn-success mt-2" onclick="saveNotes('${author}')">
-                    Save Comments
-                </button>
             </div>
             <div class="table-responsive">
                 <table class="table table-striped table-bordered trajectory-table">
@@ -546,24 +684,26 @@ async function displayTrajectoryFile(author) {
                         </tr>
                     </thead>
                     <tbody>
-                        ${parsedData.data.map((row, index) => {
+                       ${parsedData.data.map((row, index) => {
+                        
                             const summaryValue = row[`Summary_${selectedUser}`];
                             let rowClass = '';
-                            
+            
                             if (summaryValue === 'Done') {
-                                rowClass = 'background-color: #d4edda;'; // Green
+                                rowClass = 'background-color: #d4edda;';
                             } else if (summaryValue && summaryValue !== 'Done') {
-                                rowClass = 'background-color: #fff3cd;'; // Yellow
+                                rowClass = 'background-color: #fff3cd;';
                             }
 
                             return `
-                                <tr style="${rowClass}">
-                                    <td>${index + 1}</td>
-                                    ${selectedColumns.map(field => 
-                                        `<td>${row[field] !== undefined && row[field] !== null ? row[field] : ''}</td>`
-                                    ).join('')}
-                                </tr>
-                            `;
+                            <tr style="${rowClass}; cursor: pointer;" 
+                                onclick="displayRowDetails('${author}', ${index + 1}, ${JSON.stringify(row).replace(/"/g, '&quot;')}, ${JSON.stringify(parsedData.data).replace(/"/g, '&quot;')})">
+                                <td>${index + 1}</td>
+                                ${selectedColumns.map(field => 
+                                    `<td>${row[field] !== undefined && row[field] !== null ? row[field] : ''}</td>`
+                                ).join('')}
+                            </tr>
+                        `;
                         }).join('')}
                     </tbody>
                 </table>
@@ -621,19 +761,251 @@ async function displayTrajectoryFile(author) {
         console.error('Error displaying trajectory file:', error);
         alert(`Could not display trajectory file for ${author}. Please ensure the file exists in the TrajectoriesToAnalyse folder.`);
     }
+
 }
+// Open a specific row in the trajectory file
+async function displayRowDetails(author, rowNumber, rowData, allData) {
+    try {
+        toggleUserNotes(true, author); // Show notes
+        // Get and display the current notes
+        const authorData = usersCSVData.find(row => row.Author === author);
+        const currentNotes = authorData ? authorData[`Notes_${selectedUser}`] || '' : '';
+        // If allData is not provided or invalid, fetch it from the file
+        if (!Array.isArray(allData)) {
+            console.log('Fetching data from file...');
+            const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
+            const trajectoriesFolderHandle = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
+            const trajectoryFileHandle = await trajectoriesFolderHandle.getFileHandle(`${author}.csv`);
+            const file = await trajectoryFileHandle.getFile();
+            const content = await file.text();
+            
+            const parsedData = Papa.parse(content, {
+                header: true,
+                skipEmptyLines: true,
+                dynamicTyping: true,
+            });
+            
+            allData = parsedData.data;
+        }
+
+        // Update URL with row number
+        if (!isRestoringState) {
+            updateURLState({ user: selectedUser, author: author, row: rowNumber });
+        }
+
+        // Save as last viewed post
+        lastViewedPost = { author, rowNumber, rowData };
+
+        const filePreviewDiv = document.getElementById('file-preview');
+        filePreviewDiv.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3>Post ${rowNumber} of ${allData.length}</h3>
+                <div class="btn-group gap-2">
+                    <button class="btn btn-primary" onclick="displayTrajectoryFile('${author}')">
+                        ← Back to Trajectory
+                    </button>
+                    ${rowNumber > 1 && allData[rowNumber - 2] ? `
+                        <button class="btn btn-primary" 
+                            onclick="displayRowDetails('${author}', ${rowNumber - 1}, ${JSON.stringify(allData[rowNumber - 2]).replace(/"/g, '&quot;')}, ${JSON.stringify(allData).replace(/"/g, '&quot;')})">
+                            ← Previous Post
+                        </button>
+                    ` : ''}
+                    ${rowNumber < allData.length && allData[rowNumber] ? `
+                        <button class="btn btn-primary" 
+                            onclick="displayRowDetails('${author}', ${rowNumber + 1}, ${JSON.stringify(allData[rowNumber]).replace(/"/g, '&quot;')}, ${JSON.stringify(allData).replace(/"/g, '&quot;')})">
+                            Next Post →
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <!-- Notes Section -->
+                <div class="col-md-6 mb-3">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Notes on Post</h5>
+                        </div>
+                        <div class="card-body">
+                            <textarea id="postNotes" class="form-control mb-2" rows="8"
+                                >${rowData[`Notes_${selectedUser}`] || ''}</textarea>
+                            <button class="btn btn-success" 
+                                onclick="savePostNotes('${author}', ${rowNumber})">
+                                Save Comments on Post
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Section -->
+                <div class="col-md-6 mb-3">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Post Summary</h5>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Date:</strong> ${rowData.year}-${rowData.day_month}</p>
+                            <p><strong>Status:</strong> ${rowData[`Summary_${selectedUser}`] || 'Not reviewed'}</p>
+                            <p><strong>Engagement:</strong></p>
+                            <ul class="list-unstyled ms-3">
+                                <li>👍 ${rowData.ups} upvotes</li>
+                                <li>👎 ${rowData.downs} downvotes</li>
+                                <li>💬 ${rowData.num_comments} comments</li>
+                            </ul>
+                            ${rowData.total_awards_received > 0 ? 
+                                `<p>🏆 ${rowData.total_awards_received} award${rowData.total_awards_received > 1 ? 's' : ''}</p>` 
+                                : ''}
+                            ${rowData.is_meta === 'TRUE'? 
+                                `<p>📌 Meta post</p>` 
+                                : ''}
+                            ${rowData.num_crossposts > 0 ? 
+                                `<p>🔄 ${rowData.num_crossposts} crosspost${rowData.num_crossposts > 1 ? 's' : ''}</p>` 
+                                : ''}
+                            ${rowData.selftext?.trim() === '[removed]' ? 
+                                `<p style="color: red; font-weight: bold;">⚠️ Removed post</p>` 
+                                : ''}
+                            ${rowData.selftext?.trim() === '[deleted]' ? 
+                                `<p style="color: red; font-weight: bold;">⚠️ Deleted post</p>` 
+                                : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Preview -->
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Content Preview</h5>
+                        <div>
+                            <a href="${rowData.permalink}" class="btn btn-success btn-sm" target="_blank">
+                                Open in Reddit
+                            </a>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <p class="mb-0"><strong>Title:</strong> ${rowData.title}</p>
+                    </div>
+                </div>
+                <div class="card-body">
+                    ${(() => {
+                        // Display selftext if it exists
+                        let content = '';
+                        if (rowData.selftext && rowData.selftext.trim() !== '') {
+                            // First add the text content
+                            content += `<div class="mb-3">${rowData.selftext.replace(/\n/g, '<br>')}</div>`;
+                            
+                            // Then extract and add buttons for URLs
+                            const urls = rowData.selftext.match(/https?:\/\/[^\s]+/g) || [];
+                            if (urls.length > 0) {
+                                content += `<div class="mb-3">`;
+                                urls.forEach((url, index) => {
+                                    const buttonText = urls.length > 1 ? `Linked content ${index + 1}` : 'Linked content';
+                                    content += `
+                                        <a href="${url}" class="btn btn-primary btn-sm me-2 mb-2" target="_blank">
+                                            ${buttonText}
+                                        </a>
+                                    `;
+                                });
+                                content += `</div>`;
+                            }
+                        }
+                        
+                        // Check if URL is an image or video
+                        const url = rowData.url || '';
+                        const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+                        const isVideo = /\.(mp4|webm)$/i.test(url);
+                        
+                        if (isImage) {
+                            content += `<img src="${url}" class="img-fluid" alt="Content image">`;
+                        } else if (isVideo) {
+                            content += `
+                                <video controls class="w-100">
+                                    <source src="${url}" type="video/${url.split('.').pop()}">
+                                    Your browser does not support the video tag.
+                                </video>
+                            `;
+                        }
+                        
+                        return content || '<p class="text-muted">No preview available</p>';
+                    })()}
+                </div>
+            </div>
+        `;
+
+    } catch (error) {
+        console.error('Error displaying row details:', error);
+        alert('Failed to display row details. Please try again.');
+    }
+}
+
+async function savePostNotes(author, rowNumber) {
+    try {
+        const newNotes = document.getElementById('postNotes').value;
+        
+        // Get the trajectory file
+        const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
+        const trajectoriesFolderHandle = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
+        const trajectoryFileHandle = await trajectoriesFolderHandle.getFileHandle(`${author}.csv`);
+        
+        // Read current content
+        const file = await trajectoryFileHandle.getFile();
+        const content = await file.text();
+        const parsedData = Papa.parse(content, { header: true });
+        
+        // Update notes for the specific row
+        if (parsedData.data[rowNumber - 1]) {
+            // Update notes
+            parsedData.data[rowNumber - 1][`Notes_${selectedUser}`] = newNotes;
+            // Update summary based on notes content
+            const summaryColumn = `Summary_${selectedUser}`;
+            const currentSummary = parsedData.data[rowNumber - 1][summaryColumn] || '';
+            
+            if (newNotes.trim() !== '') {
+                // If notes are not empty and 'Notes saved' isn't already there, add it
+                if (!currentSummary.includes('Notes saved')) {
+                    parsedData.data[rowNumber - 1][summaryColumn] = 
+                        currentSummary ? `${currentSummary}, Notes saved` : 'Notes saved';
+                }
+            } else {
+                // If notes are empty and 'Notes saved' is there, remove it
+                if (currentSummary.includes('Notes saved')) {
+                    parsedData.data[rowNumber - 1][summaryColumn] = 
+                        currentSummary.replace(/, Notes saved|Notes saved,|Notes saved/, '').trim();
+                }
+            }
+            
+            // Write back to file
+            const csvContent = Papa.unparse(parsedData.data);
+            const writable = await trajectoryFileHandle.createWritable();
+            await writable.write(csvContent);
+            await writable.close();
+            
+            alert('Notes saved successfully!');
+            
+            // Refresh the display to show updated status
+            await displayRowDetails(author, rowNumber, parsedData.data[rowNumber - 1], parsedData.data);
+        }
+    } catch (error) {
+        console.error('Error saving post notes:', error);
+        alert('Failed to save notes. Please try again.');
+    }
+}            
 
 // Function to reload the users table
 async function reloadUsersTable() {
     try {
-        // Show the users table section again
-        const appContent = document.getElementById('app-content');
-        const userSelection = document.getElementById('user-selection');
-        const statusMessage = document.getElementById('status-message');
+        toggleUserNotes(false); // Hide notes
+
+        // Show all sections again
+        //const selectDataFolderBtn = document.getElementById('select-data-folder-btn');
+        //const appContent = document.getElementById('app-content');
+        //const userSelection = document.getElementById('user-selection');
+        //const statusMessage = document.getElementById('status-message');
         
-        appContent.style.display = 'block';
-        userSelection.style.display = 'block';
-        statusMessage.style.display = 'block';
+        //if (selectDataFolderBtn) selectDataFolderBtn.style.display = 'block';
+        //if (appContent) appContent.style.display = 'block';
+        //if (userSelection) userSelection.style.display = 'block';
+        //if (statusMessage) statusMessage.style.display = 'block';
 
         await loadUsersCSV();
     } catch (error) {
@@ -642,5 +1014,16 @@ async function reloadUsersTable() {
     }
 }
 
+const style = document.createElement('style');
+style.textContent = `
+    .highlight-row {
+        background-color: #e9ecef !important;
+        transition: background-color 0.3s;
+    }
+`;
+document.head.appendChild(style);
 // Initialize the Welcome Screen
 document.addEventListener('DOMContentLoaded', loadWelcomeScreen);
+
+window.addEventListener('hashchange', restoreStateFromURL);
+
