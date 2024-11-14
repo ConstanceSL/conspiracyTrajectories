@@ -497,19 +497,24 @@ async function displayTrajectoryFile(author) {
 
         // Filter and rename columns
         const selectedColumns = ['year', 'day_month', 'title', `Summary_${selectedUser}`];
-        const columnNames = ['col1', 'col2', 'col3', 'col4'];
+        const columnNames = ['#', 'col1', 'col2', 'col3', 'col4'];  // Added '#' for row numbers
 
         // Create HTML for trajectory view with comments section
         const filePreviewDiv = document.getElementById('file-preview');
         filePreviewDiv.innerHTML = `
             <style>
-                .trajectory-table th:nth-child(2),
-                .trajectory-table td:nth-child(2) {
-                    width: auto;
-                    white-space: nowrap;
+                .trajectory-table th:first-child,
+                .trajectory-table td:first-child {
+                    width: 50px;
+                    text-align: center;
                 }
                 .trajectory-table th:nth-child(3),
                 .trajectory-table td:nth-child(3) {
+                    width: auto;
+                    white-space: nowrap;
+                }
+                .trajectory-table th:nth-child(4),
+                .trajectory-table td:nth-child(4) {
                     width: 60%;
                 }
                 .trajectory-table td {
@@ -541,7 +546,7 @@ async function displayTrajectoryFile(author) {
                         </tr>
                     </thead>
                     <tbody>
-                        ${parsedData.data.map(row => {
+                        ${parsedData.data.map((row, index) => {
                             const summaryValue = row[`Summary_${selectedUser}`];
                             let rowClass = '';
                             
@@ -553,6 +558,7 @@ async function displayTrajectoryFile(author) {
 
                             return `
                                 <tr style="${rowClass}">
+                                    <td>${index + 1}</td>
                                     ${selectedColumns.map(field => 
                                         `<td>${row[field] !== undefined && row[field] !== null ? row[field] : ''}</td>`
                                     ).join('')}
@@ -561,7 +567,7 @@ async function displayTrajectoryFile(author) {
                         }).join('')}
                     </tbody>
                 </table>
-            </div>
+             </div>
         `;
 
         // Add the saveNotes function to handle saving
