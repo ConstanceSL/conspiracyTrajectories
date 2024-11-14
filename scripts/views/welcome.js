@@ -121,39 +121,49 @@ function selectUser(username) {
     });
 }
 
-// Request User Folder Access and Validate Folder Structure
+// Request User Folder Access and Store Folder Path in sessionStorage
 async function requestUserFolderAccess() {
     try {
         const baseFolderHandle = await window.showDirectoryPicker();
 
         // Check for 'Users' folder
-        if (!(await baseFolderHandle.getDirectoryHandle('Users', { create: false }))) {
-            throw new Error("The selected folder does not contain a 'Users' directory.");
-        }
-
         const usersFolderHandle = await baseFolderHandle.getDirectoryHandle('Users', { create: false });
-
-        // Check for user's folder (selectedUser)
-        if (!(await usersFolderHandle.getDirectoryHandle(selectedUser, { create: false }))) {
-            throw new Error(`The 'Users' folder does not contain a directory for user "${selectedUser}".`);
-        }
-
-        const userFolderHandle = await usersFolderHandle.getDirectoryHandle(selectedUser, { create: false });
+        const userFolderHandle = await usersFolderHandle.getDirectoryHandle(selectedUser);
 
         // Check for 'Data' folder inside user's folder
-        if (!(await userFolderHandle.getDirectoryHandle('Data', { create: false }))) {
-            throw new Error(`The user's folder does not contain a 'Data' subdirectory.`);
-        }
+        const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data', { create: false });
 
-        // Store folder information in sessionStorage
-        sessionStorage.setItem('selectedUser', selectedUser);
+        // Store the folder path in sessionStorage (store base folder name and username)
         sessionStorage.setItem('baseFolderName', baseFolderHandle.name);
+        sessionStorage.setItem('selectedUser', selectedUser);
 
-        console.log(`User folder for "${selectedUser}" accessed and validated successfully.`);
+        console.log(`User folder for "${selectedUser}" accessed and path stored successfully.`);
     } catch (error) {
-        console.error('Folder structure validation failed:', error);
-        alert(`Folder structure validation failed: ${error.message}`);
+        console.error('Failed to access and store user folder path:', error);
+        alert('Failed to access the selected user folder. Please try again.');
     }
+}
+
+// Select User and Redirect to Files Preview Page
+function selectUser(username) {
+    selectedUser = username;
+
+    // Highlight the selected user
+    document.querySelectorAll('.user-btn').forEach(btn => {
+        btn.classList.remove('active-user');
+    });
+    const selectedButton = document.getElementById(`user-btn-${username}`);
+    selectedButton.classList.add('active-user');
+
+    // Show the "View Data" button
+    const viewDataButton = document.getElementById('view-data-btn');
+    viewDataButton.classList.remove('d-none');
+
+    viewDataButton.addEventListener('click', async (event) => {
+        event.preventDefault();
+        await requestUserFolderAccess(); // Ensure folder path is stored
+        window.location.href = `files-preview.html?username=${encodeURIComponent(selectedUser)}`;
+    });
 }
 
 
