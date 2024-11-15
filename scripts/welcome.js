@@ -839,24 +839,27 @@ function displayUsersTable(fields, data) {
     };
 
     // Create table HTML
+    // Create table HTML
     let tableHTML = `
         <div class="table-container">
-            <div class="table-header">
-                <h5>Users Dataset</h5>
-            </div>
-            <div class="table-responsive">
-                <table id="users-table" class="table">
-                    <thead>
-                        <tr>
-                            ${fields.map(field => {
-                                if (field.startsWith('Notes_')) {
-                                    return '<th scope="col">Notes</th>';
-                                }
-                                return `<th scope="col">${columnDisplayNames[field] || field}</th>`;
-                            }).join('')}
-                        </tr>
-                    </thead>
-                    <tbody>
+            <div style="position: sticky; top: 0; background-color: #f8f9fa; z-index: 1000;">
+                <div class="table-header">
+                    <h5>Users Dataset</h5>
+                </div>
+                <div class="table-responsive">
+                    <table id="users-table" class="table">
+                        <thead style="position: sticky; top: 53px; background-color: white; z-index: 999;">
+                            <tr>
+                                ${fields.map(field => {
+                                    if (field.startsWith('Notes_')) {
+                                        return '<th scope="col">Notes</th>';
+                                    }
+                                    return `<th scope="col">${columnDisplayNames[field] || field}</th>`;
+                                }).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+`;
     `;
 
     // Create rows with conditional formatting and make them clickable
@@ -1032,17 +1035,18 @@ async function displayTrajectoryFile(author, isRestoring = false) {
             </div>
 
             <div class="table-container">
-                <div class="table-header">
-                    <h5>Trajectory Data</h5>
-                </div>
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                ${columnNames.map(name => `<th>${name}</th>`).join('')}
-                            </tr>
-                        </thead>
-                        <tbody>
+                <div style="position: sticky; top: 0; background-color: #f8f9fa; z-index: 1000;">
+                    <div class="table-header">
+                        <h5>Trajectory Data</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table trajectory-table">
+                            <thead style="position: sticky; top: 53px; background-color: white; z-index: 999;">
+                                <tr>
+                                    ${columnNames.map(name => `<th>${name}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
                             ${parsedData.data.map((row, index) => {
                                 const summaryValue = row[`Summary_${selectedUser}`];
                                 let rowClass = '';
