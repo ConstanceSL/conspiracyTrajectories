@@ -850,7 +850,7 @@ function displayUsersTable(fields, data) {
     // Create table HTML
     let tableHTML = `
         <div class="table-container" style="max-height: 80vh; overflow-y: auto;">
-            <div style="position: sticky; top: 0; background-color: white; z-index: 1000; border-bottom: 1px solid #dee2e6;">
+            <div style="position: fixed; top: 0; background-color: white; z-index: 1000; border-bottom: 1px solid #dee2e6;">
                 <div class="table-header" style="position: sticky; top: 0;">
                     <h5>Users Dataset</h5>
                 </div>
@@ -1042,7 +1042,7 @@ async function displayTrajectoryFile(author, isRestoring = false) {
             </div>
 
             <div class="table-container">
-                <div style="position: sticky; top: 0; background-color: #f8f9fa; z-index: 1000;">
+                <div style="position: fixed; top: 0; background-color: #f8f9fa; z-index: 1000;">
                     <div class="table-header">
                         <h5>Trajectory Data</h5>
                     </div>
