@@ -118,6 +118,21 @@ function checkBrowserCompatibility() {
     }
 }
 
+function checkBrowserAndSelectFolder() {
+    try {
+        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+        if (!isChrome) {
+            alert('This app is only supported in Google Chrome. Please open the app in Chrome for full functionality.');
+            return;
+        }
+        // If we're here, it's Chrome, so proceed with folder selection
+        selectDataFolder();
+    } catch (error) {
+        console.error('Error during browser check:', error);
+        alert('An error occurred while checking browser compatibility.');
+    }
+}
+
 // Manage notes visibility
 function toggleUserNotes(show = true, author = null) {
     const userNotesSection = document.getElementById('user-notes-section');
@@ -225,7 +240,9 @@ function createCompactHeader() {
             <div class="container">
                 <div class="d-flex justify-content-between align-items-center p-3">
                     <div class="d-flex align-items-center">
-                        <img src="styles/logo.png" alt="App Logo" style="height: 40px; width: auto;" class="me-3">
+                        <a href="https://constancesl.github.io/conspiracyTrajectories/index.html" target="_blank">
+                            <img src="styles/logo.png" alt="App Logo" style="height: 40px; width: auto;" class="me-3">
+                        </a>
                         <h4 class="mb-0" style="line-height: 40px;">Conspiracy Trajectory Analysis App</h4>
                     </div>
                     <div class="d-flex gap-2">
@@ -245,7 +262,7 @@ function createCompactHeader() {
 
 // Add this after checkBrowserCompatibility in loadWelcomeScreen
 async function loadWelcomeScreen() {
-    checkBrowserCompatibility();
+    //checkBrowserCompatibility();
     
     const appContent = document.getElementById('app-content');
     const hash = new URLSearchParams(window.location.hash.slice(1));
@@ -265,11 +282,14 @@ async function loadWelcomeScreen() {
                     <img src="styles/logo.png" alt="App Logo" class="mb-4" style="max-width: 150px; height: auto;">
                     <h2 class="mb-4" style="color: #333; font-weight: 600;">Conspiracy Trajectory Analysis App</h2>
                     <div">
+                    <div>
                         <button id="select-data-folder-btn" 
-                                class="btn btn-lg mt-3 px-4 py-2">
+                                class="btn btn-lg mt-3 px-4 py-2"
+                                onclick="checkBrowserAndSelectFolder()">
                             <i class="bi bi-folder2-open me-2"></i>
                             Select Data Folder
                         </button>
+                    </div>
                     </div>
 
                     <div id="user-selection" class="mt-4 d-none"></div>

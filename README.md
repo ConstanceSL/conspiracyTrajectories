@@ -27,7 +27,7 @@ The app consists of four main screens:
 3. **Trajectory Data:** Provides an overview of all posts for the selected user. Click on individual rows to view specific posts.
 4. **Post View:** Shows a summary of the selected post, including links. You can take notes on the post or leave general notes about the participant.
 
-If you refresh or reload the app, you will need to reselect the Google Drive folder. The URL will remember your previous navigation, including the selected user and post. If you were on a specific post, you’ll be redirected to the general file with an option to return to the specific post. To return to the Home Screen and restart, visit: [Home Screen Link](https://constancesl.github.io/conspiracyTrajectories/index.html).
+If you refresh or reload the app, you will need to reselect the Google Drive folder. The URL will remember your previous navigation, including the selected user and post. If you were on a specific post, you’ll be redirected to the general file with an option to return to the specific post. To return to the Home Screen and restart, click on the app logo in the top left corner or visit: [Home Screen Link](https://constancesl.github.io/conspiracyTrajectories/index.html).
 
 ## 🔍 Analysis Guidelines
 - **Familiarise with the Data:** The current aim is to get acquainted with the dataset. Feel free to take notes on specific users or posts.
