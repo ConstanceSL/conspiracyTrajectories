@@ -1623,6 +1623,7 @@ style.textContent = `
         border-radius: 10px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         margin-bottom: 1.5rem;
+        position: relative;  
     }
 
     .table-header {
@@ -1643,10 +1644,20 @@ style.textContent = `
         margin-bottom: 0;
     }
 
+    .table thead {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 10;
+    }
+
     .table thead th {
         background-color: #f8f9fa;
         border-bottom: 2px solid #dee2e6;
         font-weight: 600;
+        position: sticky;
+        top: 0;
+        z-index: 10;
     }
 
     /* Emoji styles */
