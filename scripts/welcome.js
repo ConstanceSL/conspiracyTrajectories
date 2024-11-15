@@ -112,7 +112,7 @@ function toggleUserNotes(show = true, author = null) {
     }
 }
 
-// Welcome Screen
+// Add this after checkBrowserCompatibility in loadWelcomeScreen
 async function loadWelcomeScreen() {
     checkBrowserCompatibility();
     
@@ -132,6 +132,94 @@ async function loadWelcomeScreen() {
         `;
 
         document.getElementById('select-data-folder-btn').addEventListener('click', selectDataFolder);
+    }
+}
+
+// Add the sendUserData function
+window.sendUserData = async function() {
+    try {
+        if (!selectedUser) {
+            alert('Please select a user first');
+            return;
+        }
+
+        console.log('Starting data send process...');
+        const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
+        const rootDataFolderHandle = await folderHandle.getDirectoryHandle('Data');
+
+        // Update users.csv
+        console.log('Updating users.csv...');
+        await updateCSVFile(
+            dataFolderHandle,
+            rootDataFolderHandle,
+            'users.csv',
+            selectedUser
+        );
+
+        // Update trajectory files
+        console.log('Updating trajectory files...');
+        const userTrajFolderHandle = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
+        const rootTrajFolderHandle = await rootDataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
+
+        // Get all trajectory files
+        for await (const entry of userTrajFolderHandle.values()) {
+            if (entry.kind === 'file' && entry.name.endsWith('.csv')) {
+                await updateCSVFile(
+                    userTrajFolderHandle,
+                    rootTrajFolderHandle,
+                    entry.name,
+                    selectedUser
+                );
+            }
+        }
+
+        alert('Data sent successfully!');
+    } catch (error) {
+        console.error('Error sending data:', error);
+        alert('Failed to send data. Please try again.');
+    }
+};
+
+// Helper function to update individual CSV files
+async function updateCSVFile(sourceFolderHandle, targetFolderHandle, fileName, username) {
+    try {
+        console.log(`Updating ${fileName}...`);
+        
+        // Get source file (from user's folder)
+        const sourceFileHandle = await sourceFolderHandle.getFileHandle(fileName);
+        const sourceFile = await sourceFileHandle.getFile();
+        const sourceContent = await sourceFile.text();
+        const sourceParsedData = Papa.parse(sourceContent, { header: true });
+
+        // Get target file (from root Data folder)
+        const targetFileHandle = await targetFolderHandle.getFileHandle(fileName);
+        const targetFile = await targetFileHandle.getFile();
+        const targetContent = await targetFile.text();
+        const targetParsedData = Papa.parse(targetContent, { header: true });
+
+        // Columns to copy
+        const notesColumn = `Notes_${username}`;
+        const summaryColumn = `Summary_${username}`;
+
+        // Update or add the columns
+        targetParsedData.data.forEach((row, index) => {
+            const sourceRow = sourceParsedData.data[index];
+            if (sourceRow) {
+                row[notesColumn] = sourceRow[notesColumn] || '';
+                row[summaryColumn] = sourceRow[summaryColumn] || '';
+            }
+        });
+
+        // Write back to target file
+        const csvContent = Papa.unparse(targetParsedData.data);
+        const writable = await targetFileHandle.createWritable();
+        await writable.write(csvContent);
+        await writable.close();
+
+        console.log(`Successfully updated ${fileName}`);
+    } catch (error) {
+        console.error(`Error updating ${fileName}:`, error);
+        throw error; // Propagate error to main function
     }
 }
 
@@ -164,13 +252,19 @@ async function loadUsersFolder() {
         const urlUser = hash.get('user');
         
         if (urlUser && usersList.includes(urlUser)) {
-            // If user exists in URL, directly select that user
+            const topControls = document.getElementById('top-controls');
+            topControls.innerHTML = `
+                <button id="send-data-btn" class="btn" onclick="sendUserData()">
+                    Send
+                </button>
+            `;
+            
             console.log(`Auto-selecting user from URL: ${urlUser}`);
             await selectUser(urlUser, true);
         } else {
-            // Otherwise, show the normal user selection screen
             displayUserSelection();
         }
+        
         
     } catch (error) {
         console.error('Error loading Users folder:', error);
@@ -178,7 +272,6 @@ async function loadUsersFolder() {
         await selectDataFolder();
     }
 }
-
 // Display User Selection
 function displayUserSelection() {
     const userSelectionDiv = document.getElementById('user-selection');
@@ -203,7 +296,8 @@ function displayUserSelection() {
             html += `
                 <button id="user-btn-${user}" 
                         class="btn btn-outline-primary m-2 user-btn" 
-                        onclick="selectUser('${user}')">
+                        onclick="selectUserAndUpdateButton('${user}')"
+                        >                    
                     ${user}
                 </button>
             `;
@@ -213,6 +307,23 @@ function displayUserSelection() {
     html += '</div>';
     userSelectionDiv.innerHTML = html;
 }
+
+window.selectUserAndUpdateButton = async function(username) {
+    console.log('selectUserAndUpdateButton called with:', username);
+    await selectUser(username);
+    
+    const topControls = document.getElementById('top-controls');
+    if (topControls) {
+        console.log('Updating top controls with send button');
+        topControls.innerHTML = `
+            <button id="send-data-btn" class="btn btn-primary" onclick="sendUserData()">
+                Send
+            </button>
+        `;
+    } else {
+        console.error('top-controls div not found');
+    }
+};
 
 // Modify the promptNewUser function to create the folder structure and copy data
 async function promptNewUser() {
@@ -349,10 +460,42 @@ async function copyTrajectoriesFolder(sourceFolderHandle, targetFolderHandle, us
     }
 }
 
+// Function to initialize or update the send button
+function updateSendButton() {
+    console.log('updateSendButton called, selectedUser:', selectedUser);
+    
+    const topControls = document.getElementById('top-controls');
+    if (!topControls) {
+        console.error('top-controls div not found');
+        return;
+    }
+
+    if (selectedUser) {
+        console.log('Adding send button for user:', selectedUser);
+        topControls.innerHTML = `
+            <button id="send-data-btn" class="btn btn-primary" onclick="window.sendUserData()">
+                Send
+            </button>
+        `;
+    } else {
+        console.log('No user selected, showing placeholder');
+        topControls.innerHTML = '<span>Waiting for user...</span>';
+    }
+}
+
 // Select User and Initialize File Preview
 async function selectUser(username, isRestoring = false) {
     try {
         selectedUser = username;
+        
+        // Update the existing top-controls div
+        const topControls = document.getElementById('top-controls');
+        topControls.innerHTML = `
+            <button id="send-data-btn" class="btn" onclick="sendUserData()">
+                Send
+            </button>
+        `;
+
         if (!isRestoring) {
             updateURLState({ user: username });
         }
@@ -370,8 +513,12 @@ async function selectUser(username, isRestoring = false) {
         await accessUserFolder();
         await loadUsersCSV();
 
+        // Add another call here in case the first one was too early
+        updateSendButton();
+
         // If we're restoring state and have an author parameter, load that trajectory
         if (isRestoring) {
+            updateSendButton();
             const hash = new URLSearchParams(window.location.hash.slice(1));
             const author = hash.get('author');
             if (author && usersCSVData && usersCSVData.length > 0) {
@@ -940,66 +1087,90 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                 </div>
             </div>
         `;
+        window.savePostNotes = async function(author, rowNumber) {
+            try {
+                console.log('Starting savePostNotes:', { author, rowNumber });
+                const newNotes = document.getElementById('postNotes').value;
+                
+                // Get the trajectory file
+                const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
+                const trajectoriesFolderHandle = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
+                const trajectoryFileHandle = await trajectoriesFolderHandle.getFileHandle(`${author}.csv`);
+                
+                // Read current content
+                const file = await trajectoryFileHandle.getFile();
+                const content = await file.text();
+                const parsedData = Papa.parse(content, { header: true });
+                
+                // Update notes for the specific row
+                if (parsedData.data[rowNumber - 1]) {
+                    // Update notes in trajectory file
+                    parsedData.data[rowNumber - 1][`Notes_${selectedUser}`] = newNotes;
+                    const summaryColumn = `Summary_${selectedUser}`;
+                    const currentSummary = parsedData.data[rowNumber - 1][summaryColumn] || '';
+                    
+                    if (newNotes.trim() !== '') {
+                        // Update trajectory file summary
+                        if (!currentSummary.includes('Notes saved')) {
+                            parsedData.data[rowNumber - 1][summaryColumn] = 
+                                currentSummary ? `${currentSummary}, Notes saved` : 'Notes saved';
+                        }
+        
+                        // Update users.csv
+                        try {
+                            console.log('Getting users.csv file');
+                            const usersCSVHandle = await dataFolderHandle.getFileHandle('users.csv');
+                            const usersFile = await usersCSVHandle.getFile();
+                            const usersContent = await usersFile.text();
+                            const usersParsedData = Papa.parse(usersContent, { header: true });
+                            
+                            const authorIndex = usersParsedData.data.findIndex(row => row.Author === author);
+                            console.log('Author index in users.csv:', authorIndex);
+                            
+                            if (authorIndex !== -1) {
+                                const userSummaryColumn = `Summary_${selectedUser}`;
+                                const userCurrentSummary = usersParsedData.data[authorIndex][userSummaryColumn] || '';
+                                
+                                if (!userCurrentSummary.includes('Notes saved')) {
+                                    console.log('Updating users.csv summary');
+                                    usersParsedData.data[authorIndex][userSummaryColumn] = 
+                                        userCurrentSummary ? `${userCurrentSummary}, Notes saved` : 'Notes saved';
+                                    
+                                    const usersCsvContent = Papa.unparse(usersParsedData.data);
+                                    const usersWritable = await usersCSVHandle.createWritable();
+                                    await usersWritable.write(usersCsvContent);
+                                    await usersWritable.close();
+                                    console.log('Successfully updated users.csv');
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error updating users.csv:', error);
+                        }
+                    }
+                    
+                    // Write back to trajectory file
+                    const csvContent = Papa.unparse(parsedData.data);
+                    const writable = await trajectoryFileHandle.createWritable();
+                    await writable.write(csvContent);
+                    await writable.close();
+                    
+                    alert('Notes saved successfully!');
+                    
+                    // Refresh the display
+                    await displayRowDetails(author, rowNumber, parsedData.data[rowNumber - 1], parsedData.data);
+                }
+            } catch (error) {
+                console.error('Error saving post notes:', error);
+                alert('Failed to save notes. Please try again.');
+            }
+        }    
 
     } catch (error) {
         console.error('Error displaying row details:', error);
         alert('Failed to display row details. Please try again.');
     }
 }
-
-async function savePostNotes(author, rowNumber) {
-    try {
-        const newNotes = document.getElementById('postNotes').value;
-        
-        // Get the trajectory file
-        const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
-        const trajectoriesFolderHandle = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
-        const trajectoryFileHandle = await trajectoriesFolderHandle.getFileHandle(`${author}.csv`);
-        
-        // Read current content
-        const file = await trajectoryFileHandle.getFile();
-        const content = await file.text();
-        const parsedData = Papa.parse(content, { header: true });
-        
-        // Update notes for the specific row
-        if (parsedData.data[rowNumber - 1]) {
-            // Update notes
-            parsedData.data[rowNumber - 1][`Notes_${selectedUser}`] = newNotes;
-            // Update summary based on notes content
-            const summaryColumn = `Summary_${selectedUser}`;
-            const currentSummary = parsedData.data[rowNumber - 1][summaryColumn] || '';
-            
-            if (newNotes.trim() !== '') {
-                // If notes are not empty and 'Notes saved' isn't already there, add it
-                if (!currentSummary.includes('Notes saved')) {
-                    parsedData.data[rowNumber - 1][summaryColumn] = 
-                        currentSummary ? `${currentSummary}, Notes saved` : 'Notes saved';
-                }
-            } else {
-                // If notes are empty and 'Notes saved' is there, remove it
-                if (currentSummary.includes('Notes saved')) {
-                    parsedData.data[rowNumber - 1][summaryColumn] = 
-                        currentSummary.replace(/, Notes saved|Notes saved,|Notes saved/, '').trim();
-                }
-            }
-            
-            // Write back to file
-            const csvContent = Papa.unparse(parsedData.data);
-            const writable = await trajectoryFileHandle.createWritable();
-            await writable.write(csvContent);
-            await writable.close();
-            
-            alert('Notes saved successfully!');
-            
-            // Refresh the display to show updated status
-            await displayRowDetails(author, rowNumber, parsedData.data[rowNumber - 1], parsedData.data);
-        }
-    } catch (error) {
-        console.error('Error saving post notes:', error);
-        alert('Failed to save notes. Please try again.');
-    }
-}            
-
+           
 // Function to reload the users table
 async function reloadUsersTable() {
     try {
@@ -1029,10 +1200,18 @@ style.textContent = `
         background-color: #e9ecef !important;
         transition: background-color 0.3s;
     }
+    
+    #send-data-btn {
+        background-color: #fd7e14 !important;
+        border-color: #fd7e14 !important;
+        color: white !important;
+    }
 `;
 document.head.appendChild(style);
 // Initialize the Welcome Screen
+
 document.addEventListener('DOMContentLoaded', loadWelcomeScreen);
 
 window.addEventListener('hashchange', restoreStateFromURL);
 
+window.updateSendButton = updateSendButton;
