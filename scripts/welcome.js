@@ -849,15 +849,14 @@ function displayUsersTable(fields, data) {
 
     // Create table HTML
     let tableHTML = `
-        <div class="table-container" style="max-height: 80vh; overflow-y: auto;">
-            <div style="position: fixed; top: 0; background-color: white; z-index: 1000; border-bottom: 1px solid #dee2e6;">
-                <div class="table-header" style="position: sticky; top: 0;">
+            <div class="table-container" style="max-height: calc(100vh - 150px); overflow-y: auto;">
+                <div class="table-header" style="position: sticky; top: 0; z-index: 2;">
                     <h5>Users Dataset</h5>
                 </div>
                 <div class="table-responsive">
                     <table id="users-table" class="table">
-                        <thead>
-                            <tr style="position: sticky; top: 48px; background-color: white; z-index: 999;">
+                        <thead style="position: sticky; top: 48px; z-index: 1; background: white;">
+                            <tr>
                                 ${fields.map(field => {
                                     if (field.startsWith('Notes_')) {
                                         return '<th scope="col">Notes</th>';
@@ -1041,19 +1040,18 @@ async function displayTrajectoryFile(author, isRestoring = false) {
                 </div>
             </div>
 
-            <div class="table-container">
-                <div style="position: fixed; top: 0; background-color: #f8f9fa; z-index: 1000;">
-                    <div class="table-header">
-                        <h5>Trajectory Data</h5>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table trajectory-table">
-                            <thead style="position: sticky; top: 53px; background-color: white; z-index: 999;">
-                                <tr>
-                                    ${columnNames.map(name => `<th>${name}</th>`).join('')}
-                                </tr>
-                            </thead>
-                            <tbody>
+            <div class="table-container" style="max-height: calc(100vh - 150px); overflow-y: auto;">
+                <div class="table-header" style="position: sticky; top: 0; z-index: 2;">
+                    <h5>Trajectory Data</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table trajectory-table">
+                        <thead style="position: sticky; top: 48px; z-index: 1; background: white;">
+                            <tr>
+                                ${columnNames.map(name => `<th>${name}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
                             ${parsedData.data.map((row, index) => {
                                 const summaryValue = row[`Summary_${selectedUser}`];
                                 let rowClass = '';
