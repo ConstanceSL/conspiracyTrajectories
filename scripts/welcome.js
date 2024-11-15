@@ -849,13 +849,13 @@ function displayUsersTable(fields, data) {
 
     // Create table HTML
     let tableHTML = `
-            <div class="table-container" style="max-height: calc(100vh - 150px); overflow-y: auto;">
-                <div class="table-header" style="position: sticky; top: 0; z-index: 2;">
+            <div class="table-container">
+                <div class="table-header">
                     <h5>Users Dataset</h5>
                 </div>
                 <div class="table-responsive">
                     <table id="users-table" class="table">
-                        <thead style="position: sticky; top: 48px; z-index: 1; background: white;">
+                        <thead style="position: sticky; top: 0; background: white; z-index: 1; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
                             <tr>
                                 ${fields.map(field => {
                                     if (field.startsWith('Notes_')) {
@@ -1040,19 +1040,18 @@ async function displayTrajectoryFile(author, isRestoring = false) {
                 </div>
             </div>
 
-            <div class="table-container" style="max-height: calc(100vh - 150px); overflow-y: auto;">
-                <div class="table-header" style="position: sticky; top: 0; z-index: 2;">
+            <div class="table-container">
+                <div class="table-header">
                     <h5>Trajectory Data</h5>
                 </div>
                 <div class="table-responsive">
                     <table class="table trajectory-table">
-                        <thead style="position: sticky; top: 48px; z-index: 1; background: white;">
+                        <thead style="position: sticky; top: 0; background: white; z-index: 1; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
                             <tr>
                                 ${columnNames.map(name => `<th>${name}</th>`).join('')}
                             </tr>
                         </thead>
-                        <tbody>
-                            ${parsedData.data.map((row, index) => {
+                        <tbody>                            ${parsedData.data.map((row, index) => {
                                 const summaryValue = row[`Summary_${selectedUser}`];
                                 let rowClass = '';
         
