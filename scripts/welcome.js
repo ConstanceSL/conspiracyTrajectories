@@ -135,13 +135,39 @@ function toggleUserNotes(show = true, author = null) {
                     <h2 class="mb-0" style="font-size: 1.5rem;">Trajectory Data for ${author}</h2>
                 </div>
                 <div class="card-body">
-                    <div class="form-group">
-                        <label for="userNotes" class="form-label">Notes on User:</label>
-                        <textarea id="userNotes" class="form-control" rows="3">${currentNotes}</textarea>
-                    </div>
-                    <button class="btn btn-success mt-3" onclick="saveNotes('${author}')">
-                        Save Comments On User
-                    </button>
+                    ${(() => {
+                        const userData = usersCSVData.find(row => row.Author === author);
+                        if (userData) {
+                            return `
+                                <div class="mb-3">
+                                    <p class="mb-2"><strong>Total Posts:</strong> ${userData.TotalPosts || 'N/A'}</p>
+                                    <p class="mb-2"><strong>Posts in r/conspiracy:</strong> ${userData.Conspiracy || 'N/A'}</p>
+                                    <p class="mb-2"><strong>Time Between First and Last Post:</strong> ${(() => {
+                                        const days = userData.DaysDifference;
+                                        if (!days) return 'N/A';
+                                        
+                                        const years = Math.floor(days / 365);
+                                        const months = Math.floor((days % 365) / 30);
+                                        const remainingDays = Math.floor(days % 30);
+                                        
+                                        let timeString = [];
+                                        if (years > 0) timeString.push(`${years} year${years > 1 ? 's' : ''}`);
+                                        if (months > 0) timeString.push(`${months} month${months > 1 ? 's' : ''}`);
+                                        if (remainingDays > 0) timeString.push(`${remainingDays} day${remainingDays > 1 ? 's' : ''}`);
+                                        
+                                        return timeString.join(', ') || '0 days';
+                                    })()}</p>                                </div>
+                                <div class="form-group">
+                                    <label for="userNotes" class="form-label">Notes on User:</label>
+                                    <textarea id="userNotes" class="form-control" rows="3">${currentNotes}</textarea>
+                                </div>
+                                <button class="btn btn-success mt-3" onclick="saveNotes('${author}')">
+                                    Save Comments On User
+                                </button>
+                            `;
+                        }
+                        return '';
+                    })()}
                 </div>
             </div>
         `;
@@ -752,8 +778,26 @@ function displayUsersTable(fields, data) {
                             title="Click to view trajectory file">`;
             
             fields.forEach(field => {
-                const value = row[field];
-                tableHTML += `<td>${value !== undefined && value !== null ? value : ''}</td>`;
+                if (field === 'DaysDifference') {
+                    const days = row[field];
+                    if (!days) {
+                        tableHTML += '<td>N/A</td>';
+                    } else {
+                        const years = Math.floor(days / 365);
+                        const months = Math.floor((days % 365) / 30);
+                        const remainingDays = Math.floor(days % 30);
+                        
+                        let timeString = [];
+                        if (years > 0) timeString.push(`${years}y${years > 1 ? '' : ''}`);
+                        if (months > 0) timeString.push(`${months}m${months > 1 ? '' : ''}`);
+                        if (remainingDays > 0) timeString.push(`${remainingDays}d${remainingDays > 1 ? '' : ''}`);
+                        
+                        tableHTML += `<td>${timeString.join(', ') || '0d'}</td>`;
+                    }
+                } else {
+                    const value = row[field];
+                    tableHTML += `<td>${value !== undefined && value !== null ? value : ''}</td>`;
+                }
             });
             tableHTML += '</tr>';
         }
@@ -850,30 +894,34 @@ async function displayTrajectoryFile(author, isRestoring = false) {
                     vertical-align: middle;
                 }
             </style>
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <p><strong>List of Posts for ${author}</strong></p></p>
-                <div class="btn-group gap-2">
-                    <button class="btn btn-primary" onclick="reloadUsersTable()">
-                        ← Back to Users Table
-                    </button>
-                    ${(() => {
-                        const hash = new URLSearchParams(window.location.hash.slice(1));
-                        const urlRow = hash.get('row');
-                        if (lastViewedPost || urlRow) {
-                            const rowNum = lastViewedPost ? lastViewedPost.rowNumber : parseInt(urlRow);
-                            const rowData = lastViewedPost ? lastViewedPost.rowData : parsedData.data[rowNum - 1];
-                            // Only show the button if we have valid row data
-                            if (rowData) {
-                                return `
-                                    <button class="btn btn-primary" 
-                                        onclick="displayRowDetails('${author}', ${rowNum}, ${JSON.stringify(rowData).replace(/"/g, '&quot;')})">
-                                        Return to Row ${rowNum} →
-                                    </button>
-                                `;
-                            }
-                        }
-                        return '';
-                    })()}
+            <div style="position: sticky; top: 0; background-color: #f8f9fa; padding: 15px 0 25px 0; z-index: 1000; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <div class="container">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3>List of Posts for ${author}</h3>
+                        <div class="btn-group gap-2">
+                            <button class="btn btn-primary" onclick="reloadUsersTable()">
+                                ← Back to Users Table
+                            </button>
+                            ${(() => {
+                                const hash = new URLSearchParams(window.location.hash.slice(1));
+                                const urlRow = hash.get('row');
+                                if (lastViewedPost || urlRow) {
+                                    const rowNum = lastViewedPost ? lastViewedPost.rowNumber : parseInt(urlRow);
+                                    const rowData = lastViewedPost ? lastViewedPost.rowData : parsedData.data[rowNum - 1];
+                                    // Only show the button if we have valid row data
+                                    if (rowData) {
+                                        return `
+                                            <button class="btn btn-primary" 
+                                                onclick="displayRowDetails('${author}', ${rowNum}, ${JSON.stringify(rowData).replace(/"/g, '&quot;')})">
+                                                Return to Row ${rowNum} →
+                                            </button>
+                                        `;
+                                    }
+                                }
+                                return '';
+                            })()}
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1276,16 +1324,11 @@ async function reloadUsersTable() {
     try {
         toggleUserNotes(false); // Hide notes
 
-        // Show all sections again
-        //const selectDataFolderBtn = document.getElementById('select-data-folder-btn');
-        //const appContent = document.getElementById('app-content');
-        //const userSelection = document.getElementById('user-selection');
-        //const statusMessage = document.getElementById('status-message');
-        
-        //if (selectDataFolderBtn) selectDataFolderBtn.style.display = 'block';
-        //if (appContent) appContent.style.display = 'block';
-        //if (userSelection) userSelection.style.display = 'block';
-        //if (statusMessage) statusMessage.style.display = 'block';
+        // Remove author from URL while keeping other parameters
+        const hash = new URLSearchParams(window.location.hash.slice(1));
+        hash.delete('author');
+        hash.delete('row');  // Also remove row since we're going back to the table view
+        window.location.hash = hash.toString();
 
         await loadUsersCSV();
     } catch (error) {
