@@ -11,6 +11,38 @@ let isRestoringState = false;
 let lastViewedPost = null;
 
 
+// Function to show a toast message
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: #28a745;
+        color: white;
+        padding: 15px 25px;
+        border-radius: 5px;
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+    `;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    // Fade in
+    setTimeout(() => {
+        toast.style.opacity = '1';
+    }, 10);
+
+    // Fade out and remove
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            document.body.removeChild(toast);
+        }, 300);
+    }, 2000);
+}
+
 // Function to update URL state
 function updateURLState(params = {}) {
     // Prevent triggering hashchange when we're already restoring state
@@ -896,7 +928,7 @@ async function displayTrajectoryFile(author, isRestoring = false) {
                     await writable.write(csvContent);
                     await writable.close();
                     
-                    alert('Notes saved successfully!');
+                    showToast('Notes saved successfully!');  
                 }
             } catch (error) {
                 console.error('Error saving notes:', error);
@@ -1031,6 +1063,10 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                     <a href="${url}" class="btn btn-primary btn-sm me-2" target="_blank">
                                         Linked content
                                     </a>
+                                ` : isImage ? `
+                                    <div style="max-height: 80vh; overflow: hidden; display: flex; justify-content: center;">
+                                        <img src="${url}" class="img-fluid" style="max-height: 80vh; object-fit: contain;" alt="Content image">
+                                    </div>
                                 ` : '';
                             })()}
                             <a href="${rowData.permalink}" class="btn btn-success btn-sm" target="_blank">
@@ -1153,9 +1189,8 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                     const writable = await trajectoryFileHandle.createWritable();
                     await writable.write(csvContent);
                     await writable.close();
-                    
-                    alert('Notes saved successfully!');
-                    
+                    showToast('Notes saved successfully!');  // Replace alert here
+
                     // Refresh the display
                     await displayRowDetails(author, rowNumber, parsedData.data[rowNumber - 1], parsedData.data);
                 }
