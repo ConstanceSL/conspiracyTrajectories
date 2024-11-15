@@ -12,7 +12,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
-    
+    <link rel="icon" type="image/png" href="styles/logo.png">
+
     <!-- Custom CSS -->
     <style>
         .active-user {
@@ -27,29 +28,38 @@
     </style>
 </head>
 <body>
-
-    <div class="container mt-4">
-        <div id="top-controls" style="position: absolute; top: 20px; right: 40px; z-index: 1000;">
+    <body>
+        <!-- Move top-controls outside the container -->
+        <div id="top-controls" style="position: absolute; top: 20px; right: 60px; left: 60px; z-index: 1000;">
         </div>
-        <!-- Main app content -->
-        <div id="app-content">
-            <!-- Welcome content will be dynamically inserted here -->
+    
+        <!-- Add padding-top to the container to account for the header -->
+        <div class="container" style="padding-top: 80px;">
+            <!-- Main app content -->
+            <div id="app-content">
+                <!-- Welcome content will be dynamically inserted here -->
+            </div>
+            
+            <!-- Status messages -->
+            <div id="status-message" class="mt-3"></div>
+    
+            <!-- User selection area -->
+            <div id="user-selection" class="mt-3 d-none"></div>
+    
+            <!-- User notes section -->
+            <div id="user-notes-section" style="display: none;"></div>
+    
+            <!-- File preview area -->
+            <div id="file-preview" class="mt-4">
+                <div class="table-container">
+                    <div class="table-responsive">
+                        <table class="table">
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
         </div>
-        
-        <!-- Status messages -->
-        <div id="status-message" class="mt-3"></div>
-
-        <!-- User selection area -->
-        <div id="user-selection" class="mt-3 d-none"></div>
-
-        <!-- User notes section -->
-        <div id="user-notes-section" style="display: none;"></div>
-
-        <!-- File preview area -->
-        <div id="file-preview" class="mt-4">
-            <!-- Table will be dynamically inserted here -->
-        </div>
-    </div>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>

@@ -130,15 +130,39 @@ function toggleUserNotes(show = true, author = null) {
         const currentNotes = authorData ? authorData[`Notes_${selectedUser}`] || '' : '';
         
         userNotesSection.innerHTML = `
-            <div class="mb-4 p-3" style="background-color: #f8f9fa; border-radius: 8px;">
-                <h1 class="mb-3">Trajectory Data for ${author}</h1>
-                <div class="form-group">
-                    <label for="userNotes" class="form-label">Notes on User:</label>
-                    <textarea id="userNotes" class="form-control" rows="3">${currentNotes}</textarea>
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="mb-0" style="font-size: 1.5rem;">Trajectory Data for ${author}</h2>
                 </div>
-                <button class="btn btn-success mt-2" onclick="saveNotes('${author}')">
-                    Save Comments On User
-                </button>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="userNotes" class="form-label">Notes on User:</label>
+                        <textarea id="userNotes" class="form-control" rows="3">${currentNotes}</textarea>
+                    </div>
+                    <button class="btn btn-success mt-3" onclick="saveNotes('${author}')">
+                        Save Comments On User
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Helper function to create compact header
+function createCompactHeader() {
+    const topControls = document.getElementById('top-controls');
+    if (topControls) {
+        topControls.innerHTML = `
+            <div class="container">
+                <div class="d-flex justify-content-between align-items-center p-3">
+                    <div class="d-flex align-items-center">
+                        <img src="styles/logo.png" alt="App Logo" style="height: 40px; width: auto;" class="me-3">
+                        <h4 class="mb-0" style="line-height: 40px;">Conspiracy Trajectory Analysis App</h4>
+                    </div>
+                    <button id="send-data-btn" class="btn" onclick="sendUserData()">
+                        Send data
+                    </button>
+                </div>
             </div>
         `;
     }
@@ -153,14 +177,23 @@ async function loadWelcomeScreen() {
     const urlUser = hash.get('user');
     
     if (urlUser && folderHandle) {
-        // If we already have a folder handle and user in URL, proceed
         await selectUser(urlUser, true);
     } else {
-        // Show the initial screen with folder selection button
         appContent.innerHTML = `
-            <h2>Welcome to the Social Media Analysis App</h2>
-            <button id="select-data-folder-btn" class="btn btn-primary mt-3">Select Data Folder</button>
-            <div id="user-selection" class="mt-3 d-none"></div>
+            <div class="container">
+                <div class="welcome-box text-center mt-5 p-5" style="background-color: #e5ebf1; border-radius: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <img src="styles/logo.png" alt="App Logo" class="mb-4" style="max-width: 150px; height: auto;">
+                    <h2 class="mb-4" style="color: #333; font-weight: 600;">Conspiracy Trajectory Analysis App</h2>
+                    <div class="d-inline-block">
+                        <button id="select-data-folder-btn" 
+                                class="btn btn-lg mt-3 px-4 py-2">
+                            <i class="bi bi-folder2-open me-2"></i>
+                            Select Data Folder
+                        </button>
+                    </div>
+                    <div id="user-selection" class="mt-4 d-none"></div>
+                </div>
+            </div>
         `;
 
         document.getElementById('select-data-folder-btn').addEventListener('click', selectDataFolder);
@@ -286,9 +319,9 @@ async function loadUsersFolder() {
         if (urlUser && usersList.includes(urlUser)) {
             const topControls = document.getElementById('top-controls');
             topControls.innerHTML = `
-                <button id="send-data-btn" class="btn" onclick="sendUserData()">
-                    Send
-                </button>
+                    <button id="send-data-btn" class="btn" onclick="sendUserData()">
+                        Send data
+                    </button>
             `;
             
             console.log(`Auto-selecting user from URL: ${urlUser}`);
@@ -327,7 +360,7 @@ function displayUserSelection() {
         usersList.forEach(user => {
             html += `
                 <button id="user-btn-${user}" 
-                        class="btn btn-outline-primary m-2 user-btn" 
+                        class="btn btn-primary m-2 user-btn" 
                         onclick="selectUserAndUpdateButton('${user}')"
                         >                    
                     ${user}
@@ -340,21 +373,11 @@ function displayUserSelection() {
     userSelectionDiv.innerHTML = html;
 }
 
+// Update selectUserAndUpdateButton to use createCompactHeader
 window.selectUserAndUpdateButton = async function(username) {
     console.log('selectUserAndUpdateButton called with:', username);
     await selectUser(username);
-    
-    const topControls = document.getElementById('top-controls');
-    if (topControls) {
-        console.log('Updating top controls with send button');
-        topControls.innerHTML = `
-            <button id="send-data-btn" class="btn btn-primary" onclick="sendUserData()">
-                Send
-            </button>
-        `;
-    } else {
-        console.error('top-controls div not found');
-    }
+    createCompactHeader();
 };
 
 // Modify the promptNewUser function to create the folder structure and copy data
@@ -504,11 +527,7 @@ function updateSendButton() {
 
     if (selectedUser) {
         console.log('Adding send button for user:', selectedUser);
-        topControls.innerHTML = `
-            <button id="send-data-btn" class="btn btn-primary" onclick="window.sendUserData()">
-                Send
-            </button>
-        `;
+        createCompactHeader();
     } else {
         console.log('No user selected, showing placeholder');
         topControls.innerHTML = '<span>Waiting for user...</span>';
@@ -519,14 +538,6 @@ function updateSendButton() {
 async function selectUser(username, isRestoring = false) {
     try {
         selectedUser = username;
-        
-        // Update the existing top-controls div
-        const topControls = document.getElementById('top-controls');
-        topControls.innerHTML = `
-            <button id="send-data-btn" class="btn" onclick="sendUserData()">
-                Send
-            </button>
-        `;
 
         if (!isRestoring) {
             updateURLState({ user: username });
@@ -537,7 +548,13 @@ async function selectUser(username, isRestoring = false) {
         const userSelection = document.getElementById('user-selection');
         if (selectDataFolderBtn) selectDataFolderBtn.style.display = 'none';
         if (userSelection) userSelection.style.display = 'none';
+        
+        // Clear the welcome screen
+        const appContent = document.getElementById('app-content');
+        appContent.innerHTML = '<div id="user-selection" class="mt-4"></div>';
 
+        // Create compact header
+        createCompactHeader();
         // Set sessionStorage
         sessionStorage.setItem('selectedUser', selectedUser);
 
@@ -697,20 +714,23 @@ function displayUsersTable(fields, data) {
 
     // Create table HTML
     let tableHTML = `
-        <h3>Users CSV Data</h3>
-        <div class="table-responsive">
-            <table id="users-table" class="table table-striped table-bordered">
-                <thead class="thead-dark">
-                    <tr>
-                        ${fields.map(field => {
-                            if (field.startsWith('Notes_')) {
-                                return '<th scope="col">Notes</th>';
-                            }
-                            return `<th scope="col">${columnDisplayNames[field] || field}</th>`;
-                        }).join('')}
-                    </tr>
-                </thead>
-                <tbody>
+        <div class="table-container">
+            <div class="table-header">
+                <h5>Users Dataset</h5>
+            </div>
+            <div class="table-responsive">
+                <table id="users-table" class="table">
+                    <thead>
+                        <tr>
+                            ${fields.map(field => {
+                                if (field.startsWith('Notes_')) {
+                                    return '<th scope="col">Notes</th>';
+                                }
+                                return `<th scope="col">${columnDisplayNames[field] || field}</th>`;
+                            }).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
     `;
 
     // Create rows with conditional formatting and make them clickable
@@ -840,53 +860,59 @@ async function displayTrajectoryFile(author, isRestoring = false) {
                         const hash = new URLSearchParams(window.location.hash.slice(1));
                         const urlRow = hash.get('row');
                         if (lastViewedPost || urlRow) {
-                            const rowNum = lastViewedPost ? lastViewedPost.rowNumber : urlRow;
-                            const rowData = lastViewedPost ? lastViewedPost.rowData : parsedData.data[urlRow - 1];
-                            return `
-                                <button class="btn btn-primary" 
-                                    onclick="displayRowDetails('${author}', ${rowNum}, ${JSON.stringify(rowData).replace(/"/g, '&quot;')})">
-                                    Return to Row ${rowNum} →
-                                </button>
-                            `;
+                            const rowNum = lastViewedPost ? lastViewedPost.rowNumber : parseInt(urlRow);
+                            const rowData = lastViewedPost ? lastViewedPost.rowData : parsedData.data[rowNum - 1];
+                            // Only show the button if we have valid row data
+                            if (rowData) {
+                                return `
+                                    <button class="btn btn-primary" 
+                                        onclick="displayRowDetails('${author}', ${rowNum}, ${JSON.stringify(rowData).replace(/"/g, '&quot;')})">
+                                        Return to Row ${rowNum} →
+                                    </button>
+                                `;
+                            }
                         }
-                         return '';
+                        return '';
                     })()}
                 </div>
             </div>
-            <div class="table-responsive">
-                <table class="table table-striped table-bordered trajectory-table">
-                    <thead class="thead-dark">
-                        <tr>
-                            ${columnNames.map(colName => 
-                                `<th scope="col">${colName}</th>`
-                            ).join('')}
-                        </tr>
-                    </thead>
-                    <tbody>
-                       ${parsedData.data.map((row, index) => {
-                        
-                            const summaryValue = row[`Summary_${selectedUser}`];
-                            let rowClass = '';
-            
-                            if (summaryValue === 'Done') {
-                                rowClass = 'background-color: #d4edda;';
-                            } else if (summaryValue && summaryValue !== 'Done') {
-                                rowClass = 'background-color: #fff3cd;';
-                            }
 
-                            return `
-                            <tr style="${rowClass}; cursor: pointer;" 
-                                onclick="displayRowDetails('${author}', ${index + 1}, ${JSON.stringify(row).replace(/"/g, '&quot;')}, ${JSON.stringify(parsedData.data).replace(/"/g, '&quot;')})">
-                                <td>${index + 1}</td>
-                                ${selectedColumns.map(field => 
-                                    `<td>${row[field] !== undefined && row[field] !== null ? row[field] : ''}</td>`
-                                ).join('')}
+            <div class="table-container">
+                <div class="table-header">
+                    <h5>Trajectory Data</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                ${columnNames.map(name => `<th>${name}</th>`).join('')}
                             </tr>
-                        `;
-                        }).join('')}
-                    </tbody>
-                </table>
-             </div>
+                        </thead>
+                        <tbody>
+                            ${parsedData.data.map((row, index) => {
+                                const summaryValue = row[`Summary_${selectedUser}`];
+                                let rowClass = '';
+        
+                                if (summaryValue === 'Done') {
+                                    rowClass = 'background-color: #d4edda;';
+                                } else if (summaryValue && summaryValue !== 'Done') {
+                                    rowClass = 'background-color: #fff3cd;';
+                                }
+
+                                return `
+                                    <tr style="${rowClass}; cursor: pointer;" 
+                                        onclick="displayRowDetails('${author}', ${index + 1}, ${JSON.stringify(row).replace(/"/g, '&quot;')}, ${JSON.stringify(parsedData.data).replace(/"/g, '&quot;')})">
+                                        <td>${index + 1}</td>
+                                        ${selectedColumns.map(field => 
+                                            `<td>${row[field] !== undefined && row[field] !== null ? row[field] : ''}</td>`
+                                        ).join('')}
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         `;
 
         // Add the saveNotes function to handle saving
@@ -977,31 +1003,35 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
 
         const filePreviewDiv = document.getElementById('file-preview');
         filePreviewDiv.innerHTML = `
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h3>Post ${rowNumber} of ${allData.length}</h3>
-                <div class="btn-group gap-2">
-                    <button class="btn btn-primary" onclick="displayTrajectoryFile('${author}')">
-                        ← Back to Trajectory
-                    </button>
-                    ${rowNumber > 1 && allData[rowNumber - 2] ? `
-                        <button class="btn btn-primary" 
-                            onclick="displayRowDetails('${author}', ${rowNumber - 1}, ${JSON.stringify(allData[rowNumber - 2]).replace(/"/g, '&quot;')}, ${JSON.stringify(allData).replace(/"/g, '&quot;')})">
-                            ← Previous Post
-                        </button>
-                    ` : ''}
-                    ${rowNumber < allData.length && allData[rowNumber] ? `
-                        <button class="btn btn-primary" 
-                            onclick="displayRowDetails('${author}', ${rowNumber + 1}, ${JSON.stringify(allData[rowNumber]).replace(/"/g, '&quot;')}, ${JSON.stringify(allData).replace(/"/g, '&quot;')})">
-                            Next Post →
-                        </button>
-                    ` : ''}
+            <div style="position: sticky; top: 0; background-color: #f8f9fa; padding: 15px 0 25px 0; z-index: 1000; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <div class="container">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3>Post ${rowNumber} of ${allData.length}</h3>
+                        <div class="btn-group gap-2">
+                            <button class="btn btn-primary" onclick="displayTrajectoryFile('${author}')">
+                                ← Back to Trajectory
+                            </button>
+                            ${rowNumber > 1 && allData[rowNumber - 2] ? `
+                                <button class="btn btn-primary" 
+                                    onclick="displayRowDetails('${author}', ${rowNumber - 1}, ${JSON.stringify(allData[rowNumber - 2]).replace(/"/g, '&quot;')}, ${JSON.stringify(allData).replace(/"/g, '&quot;')})">
+                                    ← Previous Post
+                                </button>
+                            ` : ''}
+                            ${rowNumber < allData.length && allData[rowNumber] ? `
+                                <button class="btn btn-primary" 
+                                    onclick="displayRowDetails('${author}', ${rowNumber + 1}, ${JSON.stringify(allData[rowNumber]).replace(/"/g, '&quot;')}, ${JSON.stringify(allData).replace(/"/g, '&quot;')})">
+                                    Next Post →
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div class="row mb-4">
                 <!-- Notes Section -->
                 <div class="col-md-6 mb-3">
-                    <div class="card">
+                    <div class="card h-100">
                         <div class="card-header">
                             <h5 class="card-title mb-0">Notes on Post</h5>
                         </div>
@@ -1018,7 +1048,7 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
 
                 <!-- Summary Section -->
                 <div class="col-md-6 mb-3">
-                    <div class="card">
+                    <div class="card h-100">
                         <div class="card-header">
                             <h5 class="card-title mb-0">Post Summary</h5>
                         </div>
@@ -1052,70 +1082,105 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
             </div>
 
             <!-- Content Preview -->
+            <div class="card">
                 <div class="card-header">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">Content Preview</h5>
+                        <h4 class="card-title mb-0">Post title</h4>
                         <div>
                             ${(() => {
                                 const url = rowData.url || '';
                                 const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
                                 return url !== rowData.permalink && !isImage ? `
-                                    <a href="${url}" class="btn btn-primary btn-sm me-2" target="_blank">
+                                    <a href="${url}" class="btn btn-primary me-2" target="_blank"
+                                        style="border: 2px solid white !important;">
                                         Linked content
                                     </a>
-                                ` : isImage ? `
-                                    <div style="max-height: 80vh; overflow: hidden; display: flex; justify-content: center;">
-                                        <img src="${url}" class="img-fluid" style="max-height: 80vh; object-fit: contain;" alt="Content image">
-                                    </div>
                                 ` : '';
                             })()}
-                            <a href="${rowData.permalink}" class="btn btn-success btn-sm" target="_blank">
+                            <a href="${rowData.permalink}" class="btn btn-primary" target="_blank" 
+                               style="border: 2px solid white !important;">
                                 Open in Reddit
                             </a>
                         </div>
                     </div>
                     <div class="mt-2">
-                        <p class="mb-0"><strong>Title:</strong> ${rowData.title}</p>
+                        <p class="mb-0 ps-3 fs-5" style="font-weight: 400; padding-right: 23%;">${rowData.title}</p>
                     </div>
                 </div>
                 <div class="card-body">
                     ${(() => {
-                        // Display selftext if it exists
                         let content = '';
-                        if (rowData.selftext && rowData.selftext.trim() !== '') {
-                            // First add the text content
-                            content += `<div class="mb-3">${rowData.selftext.replace(/\n/g, '<br>')}</div>`;
-                            
-                            // Then extract and add buttons for URLs
-                            const urls = rowData.selftext.match(/https?:\/\/[^\s]+/g) || [];
-                            if (urls.length > 0) {
-                                content += `<div class="mb-3">`;
-                                urls.forEach((url, index) => {
-                                    const buttonText = urls.length > 1 ? `Linked content ${index + 1}` : 'Open text link';
-                                    content += `
-                                        <a href="${url}" class="btn btn-primary btn-sm me-2 mb-2" target="_blank">
-                                            ${buttonText}
-                                        </a>
-                                    `;
-                                });
-                                content += `</div>`;
-                            }
-                        }
-                        
-                        // Check if URL is an image or video
+                        const hasSelftext = rowData.selftext && rowData.selftext.trim() !== '';
                         const url = rowData.url || '';
                         const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
                         const isVideo = /\.(mp4|webm)$/i.test(url);
+                        const hasMedia = isImage || isVideo;
                         
-                        if (isImage) {
-                            content += `<img src="${url}" class="img-fluid" alt="Content image">`;
-                        } else if (isVideo) {
+                        // Create row if we have both text and media
+                        if (hasSelftext && hasMedia) {
+                            content += `<div class="row g-4">`;
+                        }
+                        
+                        // Add selftext in a column if needed
+                        if (hasSelftext) {
                             content += `
-                                <video controls class="w-100">
-                                    <source src="${url}" type="video/${url.split('.').pop()}">
-                                    Your browser does not support the video tag.
-                                </video>
+                                <div class="${hasMedia ? 'col-md-6' : ''}">
+                                    <div class="p-4 rounded">
+                                        <div style="white-space: pre-line;">
+                                            ${rowData.selftext.replace(/\n/g, '<br>')}
+                                        </div>
+                                        
+                                        ${(() => {
+                                            const urls = rowData.selftext.match(/https?:\/\/[^\s]+/g) || [];
+                                            if (urls.length > 0) {
+                                                return `
+                                                    <div class="mt-3 pt-3 border-top">
+                                                        ${urls.map((url, index) => `
+                                                            <a href="${url}" 
+                                                               class="btn btn-primary btn-sm me-2 mb-2" 
+                                                               target="_blank">
+                                                                ${urls.length > 1 ? `Linked content ${index + 1}` : 'Open text link'}
+                                                            </a>
+                                                        `).join('')}
+                                                    </div>
+                                                `;
+                                            }
+                                            return '';
+                                        })()}
+                                    </div>
+                                </div>
                             `;
+                        }
+                        
+                        // Add media in a column if needed
+                        if (hasMedia) {
+                            content += `
+                                <div class="${hasSelftext ? 'col-md-6' : ''}">
+                                    ${isImage ? `
+                                        <div class="text-center">
+                                            <a href="${url}" target="_blank" title="Click to open full image in new tab">
+                                                <img src="${url}" 
+                                                     class="img-fluid" 
+                                                     style="max-height: 400px; object-fit: contain; cursor: pointer;" 
+                                                     alt="Content image">
+                                            </a>
+                                            <div class="text-muted small mt-1">
+                                                <i class="bi bi-arrows-fullscreen"></i> Click image to open in full size
+                                            </div>
+                                        </div>
+                                    ` : `
+                                        <video controls class="w-100">
+                                            <source src="${url}" type="video/${url.split('.').pop()}">
+                                            Your browser does not support the video tag.
+                                        </video>
+                                    `}
+                                </div>
+                            `;
+                        }
+                        
+                        // Close row if we opened one
+                        if (hasSelftext && hasMedia) {
+                            content += `</div>`;
                         }
                         
                         return content || '<p class="text-muted">No preview available</p>';
@@ -1231,19 +1296,276 @@ async function reloadUsersTable() {
 
 const style = document.createElement('style');
 style.textContent = `
-    .highlight-row {
-        background-color: #e9ecef !important;
-        transition: background-color 0.3s;
+    /* Global styles */
+    body {
+        background-color: #f8f9fa;
+    }
+
+    /* Header styles */
+    #top-controls {
+        max-width: 1300px;  /* matches Bootstrap's .container width */
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        background-color: #435f7b;
+        margin: 0 auto; 
+        color: white; 
+        border-top-left-radius: 10px;    /* Added for top-left corner */
+        border-top-right-radius: 10px;   /* Added for top-right corner */
+        border-bottom-left-radius: 10px;    /* Added for bottom-left corner */
+        border-bottom-right-radius: 10px;   /* Added for bottom-right corner */
+    }
+
+    #top-controls > div {
+        max-width: 1300px;  /* matches Bootstrap's .container width */
+        margin: 0 auto;
+        padding: 0 12px;
+    }
+
+    #top-controls .btn {
+        padding: 8px 60px;
+        border-radius: 6px;
+        font-weight: 500;
+    }
+
+    #select-data-folder-btn {
+        background-color: #435f7b !important;  /* Same as header background */
+        border: none;
+        color: white !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.2s ease;
+    }
+
+    #select-data-folder-btn:hover {
+        background-color: #7393B3 !important;  /* Same as card header */
+        transform: translateY(-1px);
+    }
+    #send-data-btn {
+        background-color: #d91b04 !important;
+        border-color: white !important;
+        color: white !important;
+        transition: all 0.2s ease;
+    }
+
+    #send-data-btn:hover {
+        background-color: #e96c0f !important;
+        transform: translateY(-1px);
+    }
+
+    /* Welcome screen styles */
+    .welcome-title {
+        color: #2d3748;
+        font-weight: 600;
+    }
+
+    /* Card styles */
+    .card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .card-header {
+        background-color: #7393B3;
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+        padding: 10px !important; 
+        color: white;
+        border-radius: 10px;
+    }
+
+    .card-title {
+        color: white;
+        font-weight: 600;
+    }
+
+    /* Button styles */
+    .btn {
+        background-color: #4c8c8c; !important;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+        background-color: #4c8c8c; !important;
+        border: none;
+    }
+
+    .btn-primary:hover {
+        background-color: #315a5a;
+        transform: translateY(-1px);
+    }
+
+    .btn-success {
+        background-color: #437b43;
+        border: none;
+    }
+
+    .btn-success:hover {
+        background-color: #1f391f;
+        transform: translateY(-1px);
     }
     
     #send-data-btn {
-        background-color: #fd7e14 !important;
-        border-color: #fd7e14 !important;
+        background-color: #d91b04 !important;
+        border-color: white !important;
         color: white !important;
+        font-size: 1.1rem;
+        transition: all 0.2s ease;
+    }
+
+    #send-data-btn:hover {
+        background-color: #391f1f !important;
+        border-color: white !important;
+        transform: translateY(-1px);
+        color: white !important;
+    }
+        
+    /* New urgent button style */
+    .btn-warning {
+        background-color: #660000;  
+        border: none;
+        color: white;
+        font-size: 1.1rem;  /* Increased font size */
+        font-weight: 600;  
+    }
+
+    .btn-warning:hover {
+        background-color: #4c0000;  /* Darker orange on hover */
+        transform: translateY(-1px);
+        color: white;
+    }
+
+    /* User selection styles */
+    .user-btn {
+        padding: 8px 20px;
+        margin: 0.5rem;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+
+    .user-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Form controls */
+    .form-control {
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+        padding: 0.75rem;
+        background-color: #f8f9fa;  /* light grey */
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .form-control:focus {
+        border-color: #0056b3;
+        box-shadow: 0 0 0 2px rgba(0,86,179,0.1);
+    }
+
+    /* Toast notification */
+    .toast-notification {
+        background-color: #437b43;
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+        /* Table styles */
+    .table-container {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        margin-bottom: 1.5rem;
+    }
+
+    .table-header {
+        background-color: #7393B3;
+        color: white;
+        padding: 1rem 1.25rem;
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+        border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+
+    .table-header h5 {
+        margin-bottom: 0;
+        font-weight: 600;
+    }
+
+    .table {
+        margin-bottom: 0;
+    }
+
+    .table thead th {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+        font-weight: 600;
+    }
+
+    /* Emoji styles */
+    .emoji-stat {
+        font-size: 1.1em;
+        margin-right: 0.5rem;
+    }
+
+    /* Image container */
+    .image-preview {
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .footer {
+        text-align: center;
+        padding: 20px;
+        color: #6c757d;
+        margin-top: 3rem;
+        border-top: 1px solid #dee2e6;
+        background-color: white;
+    }
+    /* Status badges */
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        background-color: #e2e8f0;
+    }
+
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #666;
     }
 `;
 document.head.appendChild(style);
-// Initialize the Welcome Screen
+
+const footer = document.createElement('footer');
+footer.className = 'footer';
+footer.innerHTML = `
+    <div class="container text-center">
+        <p class="mb-0 text-secondary">© CMBSL, 2024</p>
+    </div>
+`;
+
+document.body.appendChild(footer);
 
 document.addEventListener('DOMContentLoaded', loadWelcomeScreen);
 
