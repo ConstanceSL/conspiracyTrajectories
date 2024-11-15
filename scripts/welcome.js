@@ -978,8 +978,14 @@ async function displayTrajectoryFile(author, isRestoring = false) {
             <style>
                 .trajectory-table th:first-child,
                 .trajectory-table td:first-child {
-                    width: 50px;
+                    width: auto;
+                    min-width: fit-content;
                     text-align: center;
+                }
+                .trajectory-table th:nth-child(2),
+                .trajectory-table td:nth-child(2) {
+                    width: auto;
+                    min-width: fit-content;
                 }
                 .trajectory-table th:nth-child(3),
                 .trajectory-table td:nth-child(3) {
