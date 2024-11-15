@@ -185,9 +185,17 @@ function createCompactHeader() {
                         <img src="styles/logo.png" alt="App Logo" style="height: 40px; width: auto;" class="me-3">
                         <h4 class="mb-0" style="line-height: 40px;">Conspiracy Trajectory Analysis App</h4>
                     </div>
-                    <button id="send-data-btn" class="btn" onclick="sendUserData()">
-                        Send data
-                    </button>
+                    <div class="d-flex gap-2">
+                        <a href="https://github.com/constancesl.github.io/conspiracyTrajectories/blob/main/README.md" 
+                           target="_blank" 
+                           class="btn" 
+                           style="background-color: #d91b04 !important; border-color: white !important; color: white !important;">
+                            Help
+                        </a>
+                        <button id="send-data-btn" class="btn" onclick="sendUserData()">
+                            Send data
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
