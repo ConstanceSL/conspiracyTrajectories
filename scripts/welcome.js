@@ -397,7 +397,10 @@ async function selectDataFolder() {
         await loadUsersFolder();
     } catch (error) {
         console.error('Error selecting folder:', error);
-        alert('Folder selection was cancelled. Please try again.');
+        // Only show alert if it's not a user abort
+        if (error.name !== 'AbortError') {
+            alert('Error selecting folder. Please try again.');
+        }
     }
 }
 
@@ -841,15 +844,15 @@ function displayUsersTable(fields, data) {
     // Create table HTML
     // Create table HTML
     let tableHTML = `
-        <div class="table-container">
-            <div style="position: sticky; top: 0; background-color: #f8f9fa; z-index: 1000;">
-                <div class="table-header">
+        <div class="table-container" style="max-height: 80vh; overflow-y: auto;">
+            <div style="position: sticky; top: 0; background-color: white; z-index: 1000; border-bottom: 1px solid #dee2e6;">
+                <div class="table-header" style="position: sticky; top: 0;">
                     <h5>Users Dataset</h5>
                 </div>
                 <div class="table-responsive">
                     <table id="users-table" class="table">
-                        <thead style="position: sticky; top: 53px; background-color: white; z-index: 999;">
-                            <tr>
+                        <thead>
+                            <tr style="position: sticky; top: 48px; background-color: white; z-index: 999;">
                                 ${fields.map(field => {
                                     if (field.startsWith('Notes_')) {
                                         return '<th scope="col">Notes</th>';
