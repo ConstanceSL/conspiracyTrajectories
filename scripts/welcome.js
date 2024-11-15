@@ -118,18 +118,27 @@ function checkBrowserCompatibility() {
     }
 }
 
-function checkBrowserAndSelectFolder() {
+async function selectDataFolder() {
     try {
-        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-        if (!isChrome) {
-            alert('This app is only supported in Google Chrome. Please open the app in Chrome for full functionality.');
-            return;
+        // Show directory picker and wait for selection
+        const handle = await window.showDirectoryPicker();
+        
+        // Only proceed if we got a valid handle
+        if (handle) {
+            folderHandle = handle;
+            await loadUsersFolder();
         }
-        // If we're here, it's Chrome, so proceed with folder selection
-        selectDataFolder();
     } catch (error) {
-        console.error('Error during browser check:', error);
-        alert('An error occurred while checking browser compatibility.');
+        console.error('Error selecting folder:', error);
+        // Check for specific error types
+        if (error.name === 'AbortError') {
+            // User cancelled - do nothing
+            return;
+        } else if (error.name === 'SecurityError') {
+            alert('Permission denied to access folder. Please try again and grant permission.');
+        } else {
+            alert('Error accessing folder. Please ensure you select the correct data folder.');
+        }
     }
 }
 
@@ -397,10 +406,7 @@ async function selectDataFolder() {
         await loadUsersFolder();
     } catch (error) {
         console.error('Error selecting folder:', error);
-        // Only show alert if it's not a user abort
-        if (error.name !== 'AbortError') {
-            alert('Error selecting folder. Please try again.');
-        }
+        alert('Folder selection was cancelled. Please try again.');
     }
 }
 
@@ -842,7 +848,6 @@ function displayUsersTable(fields, data) {
     };
 
     // Create table HTML
-    // Create table HTML
     let tableHTML = `
         <div class="table-container" style="max-height: 80vh; overflow-y: auto;">
             <div style="position: sticky; top: 0; background-color: white; z-index: 1000; border-bottom: 1px solid #dee2e6;">
@@ -862,7 +867,6 @@ function displayUsersTable(fields, data) {
                             </tr>
                         </thead>
                         <tbody>
-`;
     `;
 
     // Create rows with conditional formatting and make them clickable
