@@ -544,7 +544,10 @@ async function copyAndModifyCSVFile(sourceFolderHandle, targetFolderHandle, file
 
         const file = await fileHandle.getFile();
         const text = await file.text();
-        const parsedData = Papa.parse(text, { header: true });
+        const parsedData = Papa.parse(text, { 
+            header: true,
+            skipEmptyLines: true  // Skip empty lines during parsing
+        });
         const notesColumn = `Notes_${username}`;
 
         if (!parsedData.meta.fields.includes(notesColumn)) {
@@ -560,9 +563,20 @@ async function copyAndModifyCSVFile(sourceFolderHandle, targetFolderHandle, file
                 row[summaryColumn] = '';
             });
         }
-        const csvContent = Papa.unparse(parsedData.data);
+
+        // Filter out any empty rows before unparsing
+        const filteredData = parsedData.data.filter(row => Object.values(row).some(value => value !== ''));
+        
+        const csvContent = Papa.unparse(filteredData, {
+            header: true,
+            newline: '\n'  // Explicitly set newline character
+        });
+
+        // Remove any trailing newlines before writing
+        const trimmedContent = csvContent.replace(/\n+$/, '');
+
         const writable = await newFileHandle.createWritable();
-        await writable.write(csvContent);
+        await writable.write(trimmedContent);
         await writable.close();
 
         console.log(`CSV file "${fileName}" copied and modified successfully.`);
@@ -583,7 +597,17 @@ async function copyTrajectoriesFolder(sourceFolderHandle, targetFolderHandle, us
                 const newFileHandle = await targetFolderHandle.getFileHandle(entry.name, { create: true });
                 const file = await fileHandle.getFile();
                 const writable = await newFileHandle.createWritable();
-                await writable.write(await file.arrayBuffer());
+                const content = await file.arrayBuffer();
+                
+                // Check if the last byte is a newline
+                const lastByte = new Uint8Array(content)[content.byteLength - 1];
+                if (lastByte === 10 || lastByte === 13) {  // 10 is \n, 13 is \r
+                    // Remove the trailing newline
+                    await writable.write(content.slice(0, -1));
+                } else {
+                    await writable.write(content);
+                }
+                
                 await writable.close();
 
                 console.log(`File "${entry.name}" copied successfully.`);
@@ -836,7 +860,7 @@ function displayUsersTable(fields, data) {
             fields.forEach(field => {
                 if (field === 'DaysDifference') {
                     const days = row[field];
-                    if (!days) {
+                    if (!days && days !== 0) {  // Check for null, undefined, or empty string, but allow 0
                         tableHTML += '<td>N/A</td>';
                     } else {
                         const years = Math.floor(days / 365);
