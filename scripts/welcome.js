@@ -174,6 +174,49 @@ function toggleUserNotes(show = true, author = null) {
     }
 }
 
+function openReadme() {
+    const helpWindow = window.open('', 'Help', 'width=800,height=600');
+    
+    helpWindow.document.write(`
+        <html>
+        <head>
+            <title>Help - Conspiracy Trajectory Analysis App</title>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown.css">
+            <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+            <style>
+                .markdown-body {
+                    box-sizing: border-box;
+                    min-width: 200px;
+                    max-width: 980px;
+                    margin: 0 auto;
+                    padding: 45px;
+                }
+                @media (max-width: 767px) {
+                    .markdown-body {
+                        padding: 15px;
+                    }
+                }
+            </style>
+        </head>
+        <body class="markdown-body">
+            <div id="content"></div>
+            <script>
+                document.title = "Help - Conspiracy Trajectory Analysis App";
+                fetch('https://raw.githubusercontent.com/constancesl/conspiracyTrajectories/main/README.md')
+                    .then(response => response.text())
+                    .then(text => {
+                        document.getElementById('content').innerHTML = marked.parse(text);
+                    })
+                    .catch(error => {
+                        document.getElementById('content').innerHTML = 'Error loading README: ' + error;
+                    });
+            </script>
+        </body>
+        </html>
+    `);
+}
+
+
 // Helper function to create compact header
 function createCompactHeader() {
     const topControls = document.getElementById('top-controls');
@@ -186,15 +229,13 @@ function createCompactHeader() {
                         <h4 class="mb-0" style="line-height: 40px;">Conspiracy Trajectory Analysis App</h4>
                     </div>
                     <div class="d-flex gap-2">
-                        <a href="https://github.com/constancesl.github.io/conspiracyTrajectories/blob/main/README.md" 
-                           target="_blank" 
-                           class="btn" 
-                           style="background-color: #d91b04 !important; border-color: white !important; color: white !important;">
+                        <button id="send-data-btn" class="btn" onclick="openReadme()">
                             Help
-                        </a>
+                        </button>
                         <button id="send-data-btn" class="btn" onclick="sendUserData()">
                             Send data
                         </button>
+                    </div>
                     </div>
                 </div>
             </div>
@@ -215,17 +256,24 @@ async function loadWelcomeScreen() {
     } else {
         appContent.innerHTML = `
             <div class="container">
-                <div class="welcome-box text-center mt-5 p-5" style="background-color: #e5ebf1; border-radius: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <div class="mt-3 d-flex justify-content-end">
+                    <button id="send-data-btn" class="btn" onclick="openReadme()">
+                        Help
+                    </button>
+                </div>
+                <div class="welcome-box text-center mt-3 p-5" style="background-color: #e5ebf1; border-radius: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                     <img src="styles/logo.png" alt="App Logo" class="mb-4" style="max-width: 150px; height: auto;">
                     <h2 class="mb-4" style="color: #333; font-weight: 600;">Conspiracy Trajectory Analysis App</h2>
-                    <div class="d-inline-block">
+                    <div">
                         <button id="select-data-folder-btn" 
                                 class="btn btn-lg mt-3 px-4 py-2">
                             <i class="bi bi-folder2-open me-2"></i>
                             Select Data Folder
                         </button>
                     </div>
+
                     <div id="user-selection" class="mt-4 d-none"></div>
+
                 </div>
             </div>
         `;
@@ -1217,7 +1265,7 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                             <a href="${url}" target="_blank" title="Click to open full image in new tab">
                                                 <img src="${url}" 
                                                      class="img-fluid" 
-                                                     style="max-height: 400px; object-fit: contain; cursor: pointer;" 
+                                                     style="max-height: 600px; width: 100%; object-fit: contain; cursor: pointer;" 
                                                      alt="Content image">
                                             </a>
                                             <div class="text-muted small mt-1">
@@ -1372,7 +1420,7 @@ style.textContent = `
     }
 
     #top-controls .btn {
-        padding: 8px 60px;
+        padding: 8px 12px;
         border-radius: 6px;
         font-weight: 500;
     }
@@ -1390,14 +1438,14 @@ style.textContent = `
         transform: translateY(-1px);
     }
     #send-data-btn {
-        background-color: #d91b04 !important;
+        background-color: #fb5743 !important;
         border-color: white !important;
         color: white !important;
         transition: all 0.2s ease;
     }
 
     #send-data-btn:hover {
-        background-color: #e96c0f !important;
+        background-color: #e13e2a !important;
         transform: translateY(-1px);
     }
 
@@ -1458,21 +1506,6 @@ style.textContent = `
     .btn-success:hover {
         background-color: #1f391f;
         transform: translateY(-1px);
-    }
-    
-    #send-data-btn {
-        background-color: #d91b04 !important;
-        border-color: white !important;
-        color: white !important;
-        font-size: 1.1rem;
-        transition: all 0.2s ease;
-    }
-
-    #send-data-btn:hover {
-        background-color: #391f1f !important;
-        border-color: white !important;
-        transform: translateY(-1px);
-        color: white !important;
     }
         
     /* New urgent button style */
