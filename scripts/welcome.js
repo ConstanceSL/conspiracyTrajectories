@@ -292,6 +292,12 @@ async function loadWelcomeScreen() {
                     <h2 class="mb-4" style="color: #333; font-weight: 600;">Conspiracy Trajectory Analysis App</h2>
                     <div">
                     <div>
+                        <h6>
+                            <br>
+                            <span style="font-weight: bold; font-style: italic; color: #fb5743;">
+                                Select the data_conspiracies folder inside the shared drive
+                            </span>
+                        </h6>
                         <button id="select-data-folder-btn" 
                                 class="btn btn-lg mt-3 px-4 py-2"
                                 onclick="checkBrowserAndSelectFolder()">
