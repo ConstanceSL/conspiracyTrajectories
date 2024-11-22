@@ -1520,7 +1520,7 @@ async function displayTrajectoryFile(author, isRestoring = false) {
 
     } catch (error) {
         console.error('Error displaying trajectory file:', error);
-        alert(`Could not display trajectory file for ${author}. Please ensure the file exists in the TrajectoriesToAnalyse folder.`);
+        alert(`Could not display trajectory file for  ${author}. Please ensure the file exists in the TrajectoriesToAnalyse folder.`);
     }
 }
 
