@@ -48,10 +48,35 @@ function updateURLState(params = {}) {
     // Prevent triggering hashchange when we're already restoring state
     if (isRestoringState) return;
     
-    const hash = new URLSearchParams();
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    
+    // Always preserve the user parameter
     if (params.user) hash.set('user', params.user);
-    if (params.author) hash.set('author', params.author);
-    if (params.row) hash.set('row', params.row);
+    
+    // Handle author parameter
+    if (params.author) {
+        hash.set('author', params.author);
+        
+        // Only include page if it's greater than 1
+        if (params.page && params.page > 1) {
+            hash.set('page', params.page);
+        } else {
+            hash.delete('page');
+        }
+        
+        // Handle row parameter
+        if (params.row) {
+            hash.set('row', params.row);
+        } else {
+            hash.delete('row');
+        }
+    } else {
+        // If no author, remove author-related parameters
+        hash.delete('author');
+        hash.delete('page');
+        hash.delete('row');
+    }
+    
     window.location.hash = hash.toString();
 }
 
@@ -65,29 +90,37 @@ async function restoreStateFromURL() {
         const user = hash.get('user');
         const author = hash.get('author');
         const row = hash.get('row');
+        const page = hash.get('page');
 
         if (user && folderHandle) {
             selectedUser = user;
             if (author) {
                 if (row) {
-                    // Get the row data
+                    // Get the data and display the specific row
                     const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
                     const trajectoriesFolderHandle = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
                     const trajectoryFileHandle = await trajectoriesFolderHandle.getFileHandle(`${author}.csv`);
                     const file = await trajectoryFileHandle.getFile();
                     const content = await file.text();
                     
-                    // Parse with the same options as displayTrajectoryFile
                     const parsedData = Papa.parse(content, {
                         header: true,
                         skipEmptyLines: true,
                         dynamicTyping: true,
                     });
                     
-                    if (parsedData.data[row - 1]) {
-                        await displayRowDetails(author, parseInt(row), parsedData.data[row - 1], parsedData.data);
+                    const rowNumber = parseInt(row);
+                    if (parsedData.data[rowNumber - 1]) {
+                        // Set lastViewedPost before displaying row details
+                        lastViewedPost = {
+                            rowNumber: rowNumber,
+                            rowData: parsedData.data[rowNumber - 1],
+                            page: Math.ceil(rowNumber / 30)
+                        };
+                        await displayRowDetails(author, rowNumber, parsedData.data[rowNumber - 1], parsedData.data);
                     }
                 } else {
+                    // Display the trajectory file at the specified page
                     await displayTrajectoryFile(author, true);
                 }
             }
@@ -108,7 +141,7 @@ window.addEventListener('beforeunload', function (e) {
     return 'Changes you made may not be saved. Are you sure you want to leave?';
 });
 
-// Check Browser Compatibility
+// Check Browser Compatibility TO BE DELETED
 function checkBrowserCompatibility() {
     const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
     if (!isChrome) {
@@ -240,7 +273,6 @@ function openReadme() {
     `);
 }
 
-
 // Helper function to create compact header
 function createCompactHeader() {
     const topControls = document.getElementById('top-controls');
@@ -300,7 +332,7 @@ async function loadWelcomeScreen() {
                         </h6>
                         <button id="select-data-folder-btn" 
                                 class="btn btn-lg mt-3 px-4 py-2"
-                                onclick="checkBrowserAndSelectFolder()">
+                                onclick="checkBrowserCompatibility()">
                             <i class="bi bi-folder2-open me-2"></i>
                             Select Data Folder
                         </button>
@@ -319,100 +351,205 @@ async function loadWelcomeScreen() {
 
 // Add the sendUserData function
 window.sendUserData = async function() {
+    const progress = createProgressBarSaveData();
+    const BATCH_SIZE = 5; // Process files in smaller batches
+    
     try {
         if (!selectedUser) {
+            progress.container.remove();
             alert('Please select a user first');
             return;
         }
 
         console.log('Starting data send process...');
+        updateProgress(5, 'Accessing folders...');
+        
+        // Verify folder handles are still valid
+        if (!userFolderHandle || !folderHandle) {
+            throw new Error('Lost access to folders. Please reload the page and try again.');
+        }
+
+        // Collect files to update
+        updateProgress(10, 'Scanning files to update...');
+        const filesToUpdate = [];
+        
+        // Get fresh folder handles
         const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
         const rootDataFolderHandle = await folderHandle.getDirectoryHandle('Data');
+        
+        // Add users.csv first
+        filesToUpdate.push({
+            name: 'users.csv',
+            sourcePath: 'Data',
+            targetPath: 'Data'
+        });
 
-        // Update users.csv
-        console.log('Updating users.csv...');
-        await updateCSVFile(
-            dataFolderHandle,
-            rootDataFolderHandle,
-            'users.csv',
-            selectedUser
-        );
-
-        // Update trajectory files
-        console.log('Updating trajectory files...');
+        // Get trajectory files
         const userTrajFolderHandle = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
-        const rootTrajFolderHandle = await rootDataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
-
-        // Get all trajectory files
         for await (const entry of userTrajFolderHandle.values()) {
             if (entry.kind === 'file' && entry.name.endsWith('.csv')) {
-                await updateCSVFile(
-                    userTrajFolderHandle,
-                    rootTrajFolderHandle,
-                    entry.name,
-                    selectedUser
-                );
+                filesToUpdate.push({
+                    name: entry.name,
+                    sourcePath: 'Data/TrajectoriesToAnalyse',
+                    targetPath: 'Data/TrajectoriesToAnalyse'
+                });
             }
         }
 
-        alert('Data sent successfully!');
+        const totalFiles = filesToUpdate.length;
+        let processedFiles = 0;
+
+        // Process files in batches
+        for (let i = 0; i < filesToUpdate.length; i += BATCH_SIZE) {
+            const batch = filesToUpdate.slice(i, i + BATCH_SIZE);
+            
+            // Get fresh folder handles for each batch
+            const freshUserFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
+            const freshRootFolderHandle = await folderHandle.getDirectoryHandle('Data');
+            
+            for (const file of batch) {
+                try {
+                    const progressPercent = 15 + (processedFiles / totalFiles) * 80;
+                    updateProgress(
+                        progressPercent, 
+                        `Updating ${file.name}... (${processedFiles + 1}/${totalFiles})`
+                    );
+
+                    // Get the appropriate folder handles based on the file path
+                    let sourceFolder = freshUserFolderHandle;
+                    let targetFolder = freshRootFolderHandle;
+                    
+                    if (file.sourcePath.includes('TrajectoriesToAnalyse')) {
+                        sourceFolder = await freshUserFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
+                        targetFolder = await freshRootFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
+                    }
+
+                    await updateCSVFile(
+                        sourceFolder,
+                        targetFolder,
+                        file.name,
+                        selectedUser
+                    );
+                    processedFiles++;
+                } catch (error) {
+                    console.error(`Error updating ${file.name}:`, error);
+                    throw new Error(`Failed to update ${file.name}: ${error.message}`);
+                }
+            }
+        }
+
+        updateProgress(100, 'Complete!');
+        setTimeout(() => {
+            progress.container.remove();
+            showToast('Data sent successfully!');
+        }, 1000);
+
     } catch (error) {
         console.error('Error sending data:', error);
-        alert('Failed to send data. Please try again.');
+        progress.container.remove();
+        if (error.name === 'NotReadableError') {
+            alert('Lost access to files. Please reload the page and try again.');
+        } else {
+            alert(`Failed to send data: ${error.message}`);
+        }
     }
 };
 
-// Helper function to update individual CSV files
-async function updateCSVFile(sourceFolderHandle, targetFolderHandle, fileName, username) {
+async function updateCSVFile(sourceFolder, targetFolder, fileName, username) {
+    let sourceFileHandle, targetFileHandle, writable;
     try {
-        console.log(`Updating ${fileName}...`);
+        // Get file handles
+        sourceFileHandle = await sourceFolder.getFileHandle(fileName);
+        targetFileHandle = await targetFolder.getFileHandle(fileName);
         
-        // Get source file (from user's folder)
-        const sourceFileHandle = await sourceFolderHandle.getFileHandle(fileName);
+        // Read source file
         const sourceFile = await sourceFileHandle.getFile();
-        const sourceContent = await sourceFile.text();
-        const sourceParsedData = Papa.parse(sourceContent, { header: true });
-
-        // Get target file (from root Data folder)
-        const targetFileHandle = await targetFolderHandle.getFileHandle(fileName);
+        const sourceText = await sourceFile.text();
+        
+        // Read target file
         const targetFile = await targetFileHandle.getFile();
-        const targetContent = await targetFile.text();
-        const targetParsedData = Papa.parse(targetContent, { header: true });
-
-        // Columns to copy
-        const notesColumn = `Notes_${username}`;
-        const summaryColumn = `Summary_${username}`;
-
-        // Update or add the columns
-        targetParsedData.data.forEach((row, index) => {
-            const sourceRow = sourceParsedData.data[index];
+        const targetText = await targetFile.text();
+        
+        // Parse both files
+        const sourceData = Papa.parse(sourceText, { header: true, skipEmptyLines: true });
+        const targetData = Papa.parse(targetText, { header: true, skipEmptyLines: true });
+        
+        // Update target data with source data for user-specific columns
+        const userColumns = [`Notes_${username}`, `Summary_${username}`];
+        
+        targetData.data = targetData.data.map(targetRow => {
+            const sourceRow = sourceData.data.find(row => row.Author === targetRow.Author);
             if (sourceRow) {
-                row[notesColumn] = sourceRow[notesColumn] || '';
-                row[summaryColumn] = sourceRow[summaryColumn] || '';
+                userColumns.forEach(column => {
+                    if (sourceRow[column] !== undefined) {
+                        targetRow[column] = sourceRow[column];
+                    }
+                });
             }
+            return targetRow;
         });
-
-        // Write back to target file
-        const csvContent = Papa.unparse(targetParsedData.data);
-        const writable = await targetFileHandle.createWritable();
+        
+        // Write updated data back to target file
+        const csvContent = Papa.unparse(targetData.data);
+        writable = await targetFileHandle.createWritable();
         await writable.write(csvContent);
         await writable.close();
-
-        console.log(`Successfully updated ${fileName}`);
+        
+        console.log(`${fileName} updated successfully`);
     } catch (error) {
         console.error(`Error updating ${fileName}:`, error);
-        throw error; // Propagate error to main function
+        if (writable) {
+            try {
+                await writable.close();
+            } catch (closeError) {
+                console.error('Error closing writable:', closeError);
+            }
+        }
+        throw error;
     }
 }
 
 // Select Data Folder
 async function selectDataFolder() {
     try {
-        folderHandle = await window.showDirectoryPicker();
-        await loadUsersFolder();
+        // Check browser compatibility first
+        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+        if (!isChrome) {
+            alert('This app is only supported in Google Chrome. Please open the app in Chrome for full functionality.');
+            document.body.innerHTML = '<h2 style="color: red; text-align: center;">Unsupported Browser</h2>';
+            throw new Error('Unsupported browser detected. Please use Google Chrome.');
+        }
+
+        // Only show directory picker if browser is compatible
+        const handle = await window.showDirectoryPicker();
+        
+        // Check if we have the correct folder by looking for location_check.txt
+        try {
+            await handle.getFileHandle('location_check.txt');
+        } catch (locationError) {
+            console.error('Location check failed:', locationError);
+            alert(`Wrong folder selected! 
+                  \nPlease make sure you select the correct data folder containing 'location_check.txt'.
+                  \n\nClick the Help button in the top right corner for more information.`);
+            return;
+        }
+        
+        // Only proceed if we got a valid handle and passed location check
+        if (handle) {
+            folderHandle = handle;
+            await loadUsersFolder();
+        }
     } catch (error) {
         console.error('Error selecting folder:', error);
-        alert('Folder selection was cancelled. Please try again.');
+        // Check for specific error types
+        if (error.name === 'AbortError') {
+            // User cancelled - do nothing
+            return;
+        } else if (error.name === 'SecurityError') {
+            alert('Permission denied to access folder. Please try again and grant permission.');
+        } else {
+            alert('Error accessing folder. Please ensure you select the correct data folder.');
+        }
     }
 }
 
@@ -530,131 +667,295 @@ async function promptNewUser() {
     }
 }
 
-// Create New User Folder
+// Create a progress bar component for saving data
+function createProgressBarSaveData() {
+    const progressContainer = document.createElement('div');
+    progressContainer.id = 'progress-container';
+    progressContainer.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        width: 300px;
+        z-index: 1000;
+    `;
+    
+    progressContainer.innerHTML = `
+        <h5 class="mb-3">Sending Data...</h5>
+        <div class="progress" style="height: 20px;">
+            <div id="progress-bar" 
+                 class="progress-bar progress-bar-striped progress-bar-animated" 
+                 role="progressbar" 
+                 style="width: 0%">
+                0%
+            </div>
+        </div>
+        <p id="progress-status" class="mt-2 mb-0 text-center text-muted small"></p>
+    `;
+    
+    document.body.appendChild(progressContainer);
+    
+    // Add function to update progress with rounded numbers
+    const updateProgress = (progress, status) => {
+        const roundedProgress = Math.round(progress);
+        const bar = document.getElementById('progress-bar');
+        const statusEl = document.getElementById('progress-status');
+        if (bar && statusEl) {
+            bar.style.width = `${roundedProgress}%`;
+            bar.textContent = `${roundedProgress}%`;
+            statusEl.textContent = status;
+        }
+    };
+    
+    return {
+        updateProgress,
+        container: progressContainer
+    };
+}
+
+// Create a progress bar component for creating user folder
+function createProgressBarUserFolder() {
+    const progressContainer = document.createElement('div');
+    progressContainer.id = 'progress-container';
+    progressContainer.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        width: 300px;
+        z-index: 1000;
+    `;
+    
+    progressContainer.innerHTML = `
+        <h5 class="mb-3">Creating User Folder...</h5>
+        <div class="progress" style="height: 20px;">
+            <div id="progress-bar" 
+                 class="progress-bar progress-bar-striped progress-bar-animated" 
+                 role="progressbar" 
+                 style="width: 0%">
+                0%
+            </div>
+        </div>
+        <p id="progress-status" class="mt-2 mb-0 text-center text-muted small"></p>
+    `;
+    
+    document.body.appendChild(progressContainer);
+    
+    // Add function to update progress with rounded numbers
+    const updateProgress = (progress, status) => {
+        const roundedProgress = Math.round(progress);
+        const bar = document.getElementById('progress-bar');
+        const statusEl = document.getElementById('progress-status');
+        if (bar && statusEl) {
+            bar.style.width = `${roundedProgress}%`;
+            bar.textContent = `${roundedProgress}%`;
+            statusEl.textContent = status;
+        }
+    };
+    
+    return {
+        updateProgress,
+        container: progressContainer
+    };
+}
+
+// Update progress bar
+function updateProgress(progress, status) {
+    const bar = document.getElementById('progress-bar');
+    const statusEl = document.getElementById('progress-status');
+    if (bar && statusEl) {
+        const roundedProgress = Math.round(progress);
+        bar.style.width = `${roundedProgress}%`;
+        bar.textContent = `${roundedProgress}%`;
+        statusEl.textContent = status;
+    }
+}
+
+// Create New User Folder with better error handling
 async function createNewUserFolder(username) {
+    const progress = createProgressBarUserFolder();
     try {
+        updateProgress(5, 'Creating user folder...');
         const userFolderHandle = await usersFolderHandle.getDirectoryHandle(username, { create: true });
         console.log(`User folder "${username}" created successfully.`);
 
-        // Copy 'Data' folder into the new user folder
-        await copyDataFolder(userFolderHandle, username);
+        updateProgress(10, 'Starting data copy...');
+        // Verify we still have access to the source folder
+        if (!folderHandle) {
+            throw new Error('Lost access to source folder. Please reload the page and try again.');
+        }
 
-        loadUsersFolder(); // Refresh the user list
+        await copyDataFolder(userFolderHandle, username, progress);
+        
+        updateProgress(100, 'Complete!');
+        setTimeout(() => {
+            progress.container.remove();
+            loadUsersFolder(); // Refresh the user list
+        }, 1000);
     } catch (error) {
         console.error('Error creating new user folder:', error);
-        alert('Failed to create new user folder.');
+        progress.container.remove();
+        if (error.name === 'NotReadableError') {
+            alert('Lost access to files. Please reload the page and try again.');
+        } else {
+            alert(`Failed to create new user folder: ${error.message}`);
+        }
     }
 }
 
-// Copy 'Data' Folder and 'TrajectoriesToAnalyse' Folder, Modify CSV Files
-async function copyDataFolder(userFolderHandle, username) {
+// Modified copy data folder function with better file handling
+async function copyDataFolder(userFolderHandle, username, progress) {
     try {
+        updateProgress(15, 'Getting Data folder...');
+        // Verify source folder access
         const dataFolderHandle = await folderHandle.getDirectoryHandle('Data');
         const userDataFolderHandle = await userFolderHandle.getDirectoryHandle('Data', { create: true });
 
-        // Copy files from the root 'Data' folder
+        // First, collect all file information
+        const filesToCopy = [];
+        const trajectoriesFiles = [];
+        
+        updateProgress(20, 'Scanning files...');
         for await (const entry of dataFolderHandle.values()) {
             if (entry.kind === 'file' && entry.name.endsWith('.csv')) {
-                await copyAndModifyCSVFile(dataFolderHandle, userDataFolderHandle, entry.name, username);
+                filesToCopy.push(entry);
             } else if (entry.kind === 'directory' && entry.name === 'TrajectoriesToAnalyse') {
-                // Copy 'TrajectoriesToAnalyse' folder
-                const sourceTrajectoriesHandle = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
-                const userTrajectoriesHandle = await userDataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse', { create: true });
-                await copyTrajectoriesFolder(sourceTrajectoriesHandle, userTrajectoriesHandle, username);
+                const trajFolder = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
+                for await (const trajEntry of trajFolder.values()) {
+                    if (trajEntry.kind === 'file') {
+                        trajectoriesFiles.push(trajEntry);
+                    }
+                }
             }
         }
 
+        const totalFiles = filesToCopy.length + trajectoriesFiles.length;
+        let processedFiles = 0;
+
+        // Copy main CSV files
+        for (const entry of filesToCopy) {
+            try {
+                updateProgress(
+                    25 + (processedFiles / totalFiles) * 50,
+                    `Copying and modifying ${entry.name}...`
+                );
+                await copyAndModifyCSVFile(dataFolderHandle, userDataFolderHandle, entry.name, username);
+                processedFiles++;
+            } catch (error) {
+                console.error(`Error copying file ${entry.name}:`, error);
+                throw new Error(`Failed to copy ${entry.name}: ${error.message}`);
+            }
+        }
+
+        // Copy trajectories
+        if (trajectoriesFiles.length > 0) {
+            updateProgress(75, 'Creating trajectories folder...');
+            const userTrajectoriesHandle = await userDataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse', { create: true });
+            
+            for (const entry of trajectoriesFiles) {
+                try {
+                    updateProgress(
+                        80 + (processedFiles / totalFiles) * 15,
+                        `Copying trajectory file ${entry.name}...`
+                    );
+                    const sourceFile = await entry.getFile();
+                    const targetFileHandle = await userTrajectoriesHandle.getFileHandle(entry.name, { create: true });
+                    const writable = await targetFileHandle.createWritable();
+                    await writable.write(await sourceFile.arrayBuffer());
+                    await writable.close();
+                    processedFiles++;
+                } catch (error) {
+                    console.error(`Error copying trajectory file ${entry.name}:`, error);
+                    throw new Error(`Failed to copy trajectory file ${entry.name}: ${error.message}`);
+                }
+            }
+        }
+
+        updateProgress(95, 'Finalizing...');
         console.log('Data folder and TrajectoriesToAnalyse folder copied successfully.');
     } catch (error) {
         console.error('Error copying Data folder:', error);
-        alert('Failed to copy and modify the Data folder.');
+        throw error;
     }
 }
 
-// Helper Function to Copy and Modify a CSV File
+// Modified copy and modify CSV file function
 async function copyAndModifyCSVFile(sourceFolderHandle, targetFolderHandle, fileName, username) {
     try {
         const fileHandle = await sourceFolderHandle.getFileHandle(fileName);
-        const newFileHandle = await targetFolderHandle.getFileHandle(fileName, { create: true });
-
         const file = await fileHandle.getFile();
         const text = await file.text();
+        
         const parsedData = Papa.parse(text, { 
             header: true,
-            skipEmptyLines: true  // Skip empty lines during parsing
+            skipEmptyLines: true
         });
-        const notesColumn = `Notes_${username}`;
 
+        // Add new columns if they don't exist
+        const notesColumn = `Notes_${username}`;
+        const summaryColumn = `Summary_${username}`;
+        
         if (!parsedData.meta.fields.includes(notesColumn)) {
             parsedData.meta.fields.push(notesColumn);
-            parsedData.data.forEach(row => {
-                row[notesColumn] = '';
-            });
         }
-        const summaryColumn = `Summary_${username}`;
         if (!parsedData.meta.fields.includes(summaryColumn)) {
             parsedData.meta.fields.push(summaryColumn);
-            parsedData.data.forEach(row => {
-                row[summaryColumn] = '';
-            });
         }
 
-        // Filter out any empty rows before unparsing
-        const filteredData = parsedData.data.filter(row => Object.values(row).some(value => value !== ''));
-        
-        const csvContent = Papa.unparse(filteredData, {
-            header: true,
-            newline: '\n'  // Explicitly set newline character
+        // Initialize new columns for each row
+        parsedData.data.forEach(row => {
+            if (!row[notesColumn]) row[notesColumn] = '';
+            if (!row[summaryColumn]) row[summaryColumn] = '';
         });
 
-        // Remove any trailing newlines before writing
-        const trimmedContent = csvContent.replace(/\n+$/, '');
-
+        // Filter out empty rows
+        const filteredData = parsedData.data.filter(row => Object.values(row).some(value => value !== ''));
+        
+        // Create new file with modified content
+        const newFileHandle = await targetFolderHandle.getFileHandle(fileName, { create: true });
         const writable = await newFileHandle.createWritable();
-        await writable.write(trimmedContent);
+        const csvContent = Papa.unparse(filteredData, {
+            header: true,
+            newline: '\n'
+        }).trim();
+        
+        await writable.write(csvContent);
         await writable.close();
 
         console.log(`CSV file "${fileName}" copied and modified successfully.`);
     } catch (error) {
         console.error(`Error copying and modifying CSV file "${fileName}":`, error);
+        throw error;
     }
 }
 
-// Helper Function to Copy 'TrajectoriesToAnalyse' Folder and Modify CSV Files
-async function copyTrajectoriesFolder(sourceFolderHandle, targetFolderHandle, username) {
-    try {
-        for await (const entry of sourceFolderHandle.values()) {
-            if (entry.kind === 'file' && entry.name.endsWith('.csv')) {
-                await copyAndModifyCSVFile(sourceFolderHandle, targetFolderHandle, entry.name, username);
-            } else if (entry.kind === 'file') {
-                // Copy non-CSV files directly
-                const fileHandle = await sourceFolderHandle.getFileHandle(entry.name);
-                const newFileHandle = await targetFolderHandle.getFileHandle(entry.name, { create: true });
-                const file = await fileHandle.getFile();
-                const writable = await newFileHandle.createWritable();
-                const content = await file.arrayBuffer();
-                
-                // Check if the last byte is a newline
-                const lastByte = new Uint8Array(content)[content.byteLength - 1];
-                if (lastByte === 10 || lastByte === 13) {  // 10 is \n, 13 is \r
-                    // Remove the trailing newline
-                    await writable.write(content.slice(0, -1));
-                } else {
-                    await writable.write(content);
-                }
-                
-                await writable.close();
 
-                console.log(`File "${entry.name}" copied successfully.`);
-            }
+// Modified copy trajectories folder function
+async function copyTrajectoriesFolder(sourceHandle, targetHandle, username, progress, totalFiles, processedFiles) {
+    for await (const entry of sourceHandle.values()) {
+        if (entry.kind === 'file') {
+            updateProgress(
+                80 + (processedFiles / totalFiles) * 15,
+                `Copying trajectory file ${entry.name}...`
+            );
+            const sourceFile = await entry.getFile();
+            const targetFileHandle = await targetHandle.getFileHandle(entry.name, { create: true });
+            const writable = await targetFileHandle.createWritable();
+            await writable.write(await sourceFile.arrayBuffer());
+            await writable.close();
+            processedFiles++;
         }
-
-        console.log('TrajectoriesToAnalyse folder copied and CSV files modified successfully.');
-    } catch (error) {
-        console.error('Error copying TrajectoriesToAnalyse folder:', error);
-        alert('Failed to copy and modify the TrajectoriesToAnalyse folder.');
     }
 }
+
 
 // Function to initialize or update the send button
 function updateSendButton() {
@@ -839,10 +1140,6 @@ function displayUsersTable(fields, data) {
         return;
     }
 
-    // Debug logging
-    console.log('Received fields:', fields);
-    console.log('Received data:', data);
-
     // Column name mapping
     const columnDisplayNames = {
         'Author': 'Author',
@@ -856,8 +1153,21 @@ function displayUsersTable(fields, data) {
     // Create table HTML
     let tableHTML = `
             <div class="table-container">
-                <div class="table-header">
+                <div class="table-header d-flex justify-content-between align-items-center">
                     <h5>Users Dataset</h5>
+                    <div class="d-flex align-items-center gap-2">
+                        <label for="sortSelect" class="text-white mb-0">Sort by:</label>
+                        <select id="sortSelect" class="form-select form-select-sm" style="width: auto;">
+                            ${fields.map(field => {
+                                const displayName = field.startsWith('Notes_') ? 'Notes' : 
+                                                  (columnDisplayNames[field] || field);
+                                return `<option value="${field}">${displayName}</option>`;
+                            }).join('')}
+                        </select>
+                        <button id="sortDirection" class="btn btn-sm btn-light">
+                            <i class="bi bi-arrow-down"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="table-responsive">
                     <table id="users-table" class="table">
@@ -873,7 +1183,49 @@ function displayUsersTable(fields, data) {
                         </thead>
                         <tbody>
     `;
+    // Add this helper function at the start
+    function createTruncatedCell(text, maxLength = 50) {
+        if (!text || text.length <= maxLength) {
+            return `<td>${text || ''}</td>`;
+        }
+        
+        const truncated = text.substring(0, maxLength);
+        return `
+            <td>
+                <div class="truncated-text">
+                    <div class="content">
+                        <span class="short-text">${truncated}...</span>
+                        <span class="full-text" style="display: none;">${text}</span>
+                    </div>
+                    <button class="btn btn-link btn-sm expand-btn p-0 ms-1" 
+                            onclick="toggleTruncatedText(this, event)">
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+    }
 
+    window.toggleTruncatedText = function(button, event) {
+        event.stopPropagation();
+        const container = button.closest('.truncated-text');
+        const fullText = container.querySelector('.full-text');
+        const shortText = container.querySelector('.short-text');
+        const isExpanded = container.classList.contains('expanded');
+        
+        if (isExpanded) {
+            fullText.style.display = 'none';
+            shortText.style.display = 'inline';
+            container.classList.remove('expanded');
+        } else {
+            fullText.style.display = 'inline';
+            shortText.style.display = 'none';
+            container.classList.add('expanded');
+        }
+        
+        // Rotate the chevron
+        button.querySelector('i').style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(180deg)';
+    };
     // Create rows with conditional formatting and make them clickable
     data.forEach(row => {
         if (row && typeof row === 'object') {
@@ -882,12 +1234,11 @@ function displayUsersTable(fields, data) {
             
             let rowClass = '';
             if (summaryValue === 'Done') {
-                rowClass = 'background-color: #d4edda;'; // Bootstrap success color (green)
+                rowClass = 'background-color: #d4edda;';
             } else if (summaryValue && summaryValue !== 'Done') {
-                rowClass = 'background-color: #fff3cd;'; // Bootstrap warning color (yellow)
+                rowClass = 'background-color: #fff3cd;';
             }
 
-            // Add cursor pointer and click handler
             tableHTML += `<tr style="${rowClass}; cursor: pointer;" 
                             onclick="displayTrajectoryFile('${row.Author}')" 
                             title="Click to view trajectory file">`;
@@ -895,7 +1246,7 @@ function displayUsersTable(fields, data) {
             fields.forEach(field => {
                 if (field === 'DaysDifference') {
                     const days = row[field];
-                    if (!days && days !== 0) {  // Check for null, undefined, or empty string, but allow 0
+                    if (!days && days !== 0) {
                         tableHTML += '<td>N/A</td>';
                     } else {
                         const years = Math.floor(days / 365);
@@ -903,12 +1254,15 @@ function displayUsersTable(fields, data) {
                         const remainingDays = Math.floor(days % 30);
                         
                         let timeString = [];
-                        if (years > 0) timeString.push(`${years}y${years > 1 ? '' : ''}`);
-                        if (months > 0) timeString.push(`${months}m${months > 1 ? '' : ''}`);
-                        if (remainingDays > 0) timeString.push(`${remainingDays}d${remainingDays > 1 ? '' : ''}`);
+                        if (years > 0) timeString.push(`${years}y`);
+                        if (months > 0) timeString.push(`${months}m`);
+                        if (remainingDays > 0) timeString.push(`${remainingDays}d`);
                         
                         tableHTML += `<td>${timeString.join(', ') || '0d'}</td>`;
                     }
+                } else if (field.startsWith('Notes_')) {
+                                    // Handle Notes with truncation
+                    tableHTML += createTruncatedCell(row[field]);
                 } else {
                     const value = row[field];
                     tableHTML += `<td>${value !== undefined && value !== null ? value : ''}</td>`;
@@ -918,63 +1272,78 @@ function displayUsersTable(fields, data) {
         }
     });
 
+
     tableHTML += `
                 </tbody>
             </table>
         </div>
     `;
 
-    // Add CSS for hover effect
-    const style = document.createElement('style');
-    style.textContent = `
-        #users-table tbody tr:hover {
-            background-color: #f5f5f5 !important;
-            transition: background-color 0.2s;
-        }
-    `;
-    document.head.appendChild(style);
-
     // Update the DOM
     filePreviewDiv.innerHTML = tableHTML;
+
+    // Add sorting functionality
+    const sortSelect = document.getElementById('sortSelect');
+    const sortDirection = document.getElementById('sortDirection');
+    let isAscending = true;
+
+    function sortTable() {
+        const field = sortSelect.value;
+        const tbody = document.querySelector('#users-table tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+
+        rows.sort((a, b) => {
+            let aVal = a.children[fields.indexOf(field)].textContent;
+            let bVal = b.children[fields.indexOf(field)].textContent;
+
+            // Handle numeric fields
+            if (field === 'TotalPosts' || field === 'Conspiracy' || field === 'DaysDifference') {
+                aVal = parseFloat(aVal) || 0;
+                bVal = parseFloat(bVal) || 0;
+            }
+
+            if (aVal < bVal) return isAscending ? -1 : 1;
+            if (aVal > bVal) return isAscending ? 1 : -1;
+            return 0;
+        });
+
+        // Clear and re-append sorted rows
+        tbody.innerHTML = '';
+        rows.forEach(row => tbody.appendChild(row));
+    }
+
+    sortSelect.addEventListener('change', sortTable);
+    sortDirection.addEventListener('click', () => {
+        isAscending = !isAscending;
+        sortDirection.innerHTML = `<i class="bi bi-arrow-${isAscending ? 'down' : 'up'}"></i>`;
+        sortTable();
+    });
+
+    // Initial sort
+    sortTable();
+
     console.log('Table rendered successfully.');
 }
+
 
 // Display Trajectory File
 async function displayTrajectoryFile(author, isRestoring = false) {
     console.log('Starting displayTrajectoryFile with:', { author, isRestoring });
-    if (!isRestoring) {
-        updateURLState({ user: selectedUser, author: author });
-    }
+    
     try {
-        // Log the state of important variables
-        console.log('Current state:', {
-            selectedUser,
-            userFolderHandle: !!userFolderHandle,
-            usersCSVData: !!usersCSVData,
-            authorData: usersCSVData.find(row => row.Author === author)
-        });
+        // Get current URL parameters
+        const hash = new URLSearchParams(window.location.hash.slice(1));
+        const urlRow = hash.get('row');
+        const urlPage = parseInt(hash.get('page')) || 1;
 
-        toggleUserNotes(true, author); // Show notes
+        toggleUserNotes(true, author);
 
-        // Get the current notes for this author from usersCSVData
-        const authorData = usersCSVData.find(row => row.Author === author);
-        console.log('Author data found:', !!authorData);
-        const currentNotes = authorData ? authorData[`Notes_${selectedUser}`] || '' : '';
-
-        // Log before file operations
-        console.log('About to access file handles');
-        
         // Get the file content
         const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
-        console.log('Got Data folder');
         const trajectoriesFolderHandle = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
-        console.log('Got TrajectoriesToAnalyse folder');
         const trajectoryFileHandle = await trajectoriesFolderHandle.getFileHandle(`${author}.csv`);
-        console.log('Got trajectory file handle');
         const file = await trajectoryFileHandle.getFile();
-        console.log('Got file');
         const fileContent = await file.text();
-        console.log('Got file content');
 
         // Parse CSV content
         const parsedData = Papa.parse(fileContent, {
@@ -983,11 +1352,41 @@ async function displayTrajectoryFile(author, isRestoring = false) {
             dynamicTyping: true,
         });
 
-        // Filter and rename columns
-        const selectedColumns = ['year', 'day_month', 'title', `Notes_${selectedUser}`, `Summary_${selectedUser}`];
-        const columnNames = ['#', 'Year', 'Date', 'Title', 'Notes', 'Status'];  // Added '#' for row numbers
+        // If we have a row parameter but no lastViewedPost, restore it
+        if (urlRow && !lastViewedPost) {
+            const rowNumber = parseInt(urlRow);
+            const page = Math.ceil(rowNumber / 30);
+            
+            if (parsedData.data[rowNumber - 1]) {
+                lastViewedPost = {
+                    rowNumber: rowNumber,
+                    rowData: parsedData.data[rowNumber - 1],
+                    page: page
+                };
+            }
+        }
 
-        // Create HTML for trajectory view with comments section
+        // Pagination settings
+        const rowsPerPage = 30;
+        const currentPage = urlPage;
+        const totalPages = Math.ceil(parsedData.data.length / rowsPerPage);
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        const currentData = parsedData.data.slice(startIndex, endIndex);
+
+        if (!isRestoring) {
+            updateURLState({ 
+                user: selectedUser, 
+                author: author,
+                page: currentPage > 1 ? currentPage : null
+            });
+        }
+
+        // Selected columns for display
+        const selectedColumns = ['year', 'day_month', 'title', `Notes_${selectedUser}`, `Summary_${selectedUser}`];
+        const columnNames = ['#', 'Year', 'Date', 'Title', 'Notes', 'Status'];
+
+        // Create HTML for trajectory view
         const filePreviewDiv = document.getElementById('file-preview');
         filePreviewDiv.innerHTML = `
             <style>
@@ -1023,122 +1422,187 @@ async function displayTrajectoryFile(author, isRestoring = false) {
                             <button class="btn btn-primary" onclick="reloadUsersTable()">
                                 ← Back to Users Table
                             </button>
-                            ${(() => {
-                                const hash = new URLSearchParams(window.location.hash.slice(1));
-                                const urlRow = hash.get('row');
-                                if (lastViewedPost || urlRow) {
-                                    const rowNum = lastViewedPost ? lastViewedPost.rowNumber : parseInt(urlRow);
-                                    const rowData = lastViewedPost ? lastViewedPost.rowData : parsedData.data[rowNum - 1];
-                                    // Only show the button if we have valid row data
-                                    if (rowData) {
-                                        return `
-                                            <button class="btn btn-primary" 
-                                                onclick="displayRowDetails('${author}', ${rowNum}, ${JSON.stringify(rowData).replace(/"/g, '&quot;')})">
-                                                Return to Row ${rowNum} →
-                                            </button>
-                                        `;
-                                    }
-                                }
-                                return '';
-                            })()}
+                            ${lastViewedPost ? `
+                                <button class="btn btn-primary" 
+                                    onclick="displayRowDetails('${author}', ${lastViewedPost.rowNumber}, ${JSON.stringify(lastViewedPost.rowData).replace(/"/g, '&quot;')})">
+                                    Return to Row ${lastViewedPost.rowNumber} →
+                                </button>
+                            ` : ''}
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="table-container">
-                <div class="table-header">
+                <div class="table-header d-flex justify-content-between align-items-center">
                     <h5>Trajectory Data</h5>
+                    <span class="text-white">
+                        Showing ${startIndex + 1}-${Math.min(endIndex, parsedData.data.length)} 
+                        of ${parsedData.data.length} posts
+                    </span>
                 </div>
                 <div class="table-responsive">
                     <table class="table trajectory-table">
-                        <thead style="position: sticky; top: 0; background: white; z-index: 1; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                        <thead>
                             <tr>
                                 ${columnNames.map(name => `<th>${name}</th>`).join('')}
                             </tr>
                         </thead>
-                        <tbody>                            ${parsedData.data.map((row, index) => {
-                                const summaryValue = row[`Summary_${selectedUser}`];
-                                let rowClass = '';
-        
-                                if (summaryValue === 'Done') {
-                                    rowClass = 'background-color: #d4edda;';
-                                } else if (summaryValue && summaryValue !== 'Done') {
-                                    rowClass = 'background-color: #fff3cd;';
+                        <tbody>
+                        ${currentData.map((row, index) => {
+                            const absoluteIndex = startIndex + index;
+                            const summaryValue = row[`Summary_${selectedUser}`];
+                            let rowClass = '';
+                            if (summaryValue === 'Done') {
+                                rowClass = 'background-color: #d4edda;';
+                            } else if (summaryValue && summaryValue !== 'Done') {
+                                rowClass = 'background-color: #fff3cd;';
+                            }
+                        
+                            function createTruncatedCell(text, maxLength = 50) {
+                                if (!text || text.length <= maxLength) {
+                                    return `<td>${text || ''}</td>`;
                                 }
-
+                                
+                                const truncated = text.substring(0, maxLength);
                                 return `
-                                    <tr style="${rowClass}; cursor: pointer;" 
-                                        onclick="displayRowDetails('${author}', ${index + 1}, ${JSON.stringify(row).replace(/"/g, '&quot;')}, ${JSON.stringify(parsedData.data).replace(/"/g, '&quot;')})">
-                                        <td>${index + 1}</td>
-                                        ${selectedColumns.map(field => 
-                                            `<td>${row[field] !== undefined && row[field] !== null ? row[field] : ''}</td>`
-                                        ).join('')}
-                                    </tr>
+                                    <td>
+                                        <div class="truncated-text">
+                                            <div class="content">
+                                                <span class="short-text">${truncated}...</span>
+                                                <span class="full-text" style="display: none;">${text}</span>
+                                            </div>
+                                            <button class="btn btn-link btn-sm expand-btn p-0 ms-1" 
+                                                    onclick="toggleTruncatedText(this, event)">
+                                                <i class="bi bi-chevron-down"></i>
+                                            </button>
+                                        </div>
+                                    </td>
                                 `;
-                            }).join('')}
+                            }
+
+                            return `
+                            <tr style="${rowClass}; cursor: pointer;" 
+                                onclick="displayRowDetails('${author}', ${absoluteIndex + 1}, ${JSON.stringify(row).replace(/"/g, '&quot;')})">
+                                <td>${absoluteIndex + 1}</td>
+                                <td>${row.year || ''}</td>
+                                <td>${row.day_month || ''}</td>
+                                <td>${row.title || ''}</td>
+                                ${createTruncatedCell(row[`Notes_${selectedUser}`])}
+                                <td>${summaryValue || ''}</td>
+                            </tr>
+                        `;
+                    }).join('')}
                         </tbody>
                     </table>
                 </div>
+                <div class="pagination-controls d-flex justify-content-between align-items-center p-3">
+                    <div class="btn-group">
+                        ${currentPage > 1 ? `
+                            <button class="btn btn-primary" 
+                                onclick="navigateTrajectoryPage('${author}', ${currentPage - 1})">
+                                ← Previous
+                            </button>
+                        ` : ''}
+                        ${currentPage < totalPages ? `
+                            <button class="btn btn-primary ms-2" 
+                                onclick="navigateTrajectoryPage('${author}', ${currentPage + 1})">
+                                Next →
+                            </button>
+                        ` : ''}
+                    </div>
+                    <span class="page-info">
+                        Page ${currentPage} of ${totalPages}
+                    </span>
+                </div>
             </div>
         `;
-
-        // Add the saveNotes function to handle saving
-        window.saveNotes = async function(author) {
-            try {
-                const newNotes = document.getElementById('userNotes').value;
-                
-                // Get the Data folder and users.csv file handles
-                const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
-                const usersCSVHandle = await dataFolderHandle.getFileHandle('users.csv');
-                
-                // Update the notes and summary in the data
-                const authorIndex = usersCSVData.findIndex(row => row.Author === author);
-                if (authorIndex !== -1) {
-                    // Update notes
-                    usersCSVData[authorIndex][`Notes_${selectedUser}`] = newNotes;
-                    
-                    // Update summary based on conditions
-                    const summaryColumn = `Summary_${selectedUser}`;
-                    const currentSummary = usersCSVData[authorIndex][summaryColumn] || '';
-                    
-                    if (newNotes.trim() !== '') {
-                        // If notes are not empty and 'Notes saved' isn't already there, add it
-                        if (!currentSummary.includes('Notes saved')) {
-                            usersCSVData[authorIndex][summaryColumn] = 
-                                currentSummary ? `${currentSummary}, Notes saved` : 'Notes saved';
-                        }
-                    } else {
-                        // If notes are empty and 'Notes saved' is there, remove it
-                        if (currentSummary.includes('Notes saved')) {
-                            usersCSVData[authorIndex][summaryColumn] = 
-                                currentSummary.replace(/, Notes saved|Notes saved,|Notes saved/, '').trim();
-                        }
-                    }
-                    
-                    // Write the updated data back to the file
-                    const csvContent = Papa.unparse(usersCSVData);
-                    const writable = await usersCSVHandle.createWritable();
-                    await writable.write(csvContent);
-                    await writable.close();
-                    
-                    showToast('Notes saved successfully!');  
-                }
-            } catch (error) {
-                console.error('Error saving notes:', error);
-                alert('Failed to save notes. Please try again.');
-            }
-        };
 
     } catch (error) {
         console.error('Error displaying trajectory file:', error);
         alert(`Could not display trajectory file for ${author}. Please ensure the file exists in the TrajectoriesToAnalyse folder.`);
     }
-
 }
+
+// Add the saveNotes function to handle saving
+window.saveNotes = async function(author) {
+    try {
+        const newNotes = document.getElementById('userNotes').value;
+                
+        // Get the Data folder and users.csv file handles
+        const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
+        const usersCSVHandle = await dataFolderHandle.getFileHandle('users.csv');
+        
+        // Update the notes and summary in the data
+        const authorIndex = usersCSVData.findIndex(row => row.Author === author);
+        if (authorIndex !== -1) {
+            // Update notes
+            usersCSVData[authorIndex][`Notes_${selectedUser}`] = newNotes;
+            
+            // Update summary based on conditions
+            const summaryColumn = `Summary_${selectedUser}`;
+            const currentSummary = usersCSVData[authorIndex][summaryColumn] || '';
+            
+            if (newNotes.trim() !== '') {
+                // If notes are not empty and 'Notes saved' isn't already there, add it
+                if (!currentSummary.includes('Notes saved')) {
+                    usersCSVData[authorIndex][summaryColumn] = 
+                        currentSummary ? `${currentSummary}, Notes saved` : 'Notes saved';
+                }
+            } else {
+                // If notes are empty and 'Notes saved' is there, remove it
+                if (currentSummary.includes('Notes saved')) {
+                    usersCSVData[authorIndex][summaryColumn] = 
+                        currentSummary.replace(/, Notes saved|Notes saved,|Notes saved/, '').trim();
+                }
+            }
+            
+            // Write the updated data back to the file
+            const csvContent = Papa.unparse(usersCSVData);
+            const writable = await usersCSVHandle.createWritable();
+            await writable.write(csvContent);
+            await writable.close();
+            
+            showToast('Notes saved successfully!');
+        }
+    } catch (error) {
+        console.error('Error saving notes:', error);
+        alert('Failed to save notes. Please try again.');
+    }
+};
+
+// Navigation function
+function navigateTrajectoryPage(author, page) {
+    updateURLState({ 
+        user: selectedUser, 
+        author: author,
+        page: page > 1 ? page : null
+    });
+    displayTrajectoryFile(author, true);
+}
+
 // Open a specific row in the trajectory file
 async function displayRowDetails(author, rowNumber, rowData, allData) {
     try {
+        // Calculate the page number for this row
+        const rowsPerPage = 30;
+        const page = Math.ceil(rowNumber / rowsPerPage);
+        
+        // Save the last viewed post with absolute row number
+        lastViewedPost = {
+            rowNumber: rowNumber,
+            rowData: rowData,
+            page: page
+        };
+
+        // Update URL with both page and row
+        updateURLState({ 
+            user: selectedUser, 
+            author: author,
+            page: page > 1 ? page : null,
+            row: rowNumber 
+        });
+
         toggleUserNotes(true, author); // Show notes
         // Get and display the current notes
         const authorData = usersCSVData.find(row => row.Author === author);
@@ -1447,7 +1911,8 @@ async function reloadUsersTable() {
         // Remove author from URL while keeping other parameters
         const hash = new URLSearchParams(window.location.hash.slice(1));
         hash.delete('author');
-        hash.delete('row');  // Also remove row since we're going back to the table view
+        hash.delete('row');  
+        hash.delete('page'); 
         window.location.hash = hash.toString();
 
         await loadUsersCSV();
@@ -1666,6 +2131,37 @@ style.textContent = `
         z-index: 10;
     }
 
+    .truncated-text {
+        position: relative;
+        display: flex;
+        align-items: flex-start;
+        max-width: 300px;
+    }
+
+    .truncated-text .content {
+        flex: 1;
+    }
+
+    .truncated-text .full-text {
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .truncated-text .expand-btn {
+        flex-shrink: 0;
+        color: #0d6efd;
+        padding: 0;
+        margin-left: 4px;
+    }
+
+    .truncated-text .expand-btn i {
+        transition: transform 0.2s ease;
+    }
+
+    .truncated-text .expand-btn:hover {
+        color: #0a58ca;
+        text-decoration: none;
+    
     /* Emoji styles */
     .emoji-stat {
         font-size: 1.1em;
