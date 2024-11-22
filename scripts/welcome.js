@@ -213,10 +213,37 @@ function toggleUserNotes(show = true, author = null) {
                                         if (remainingDays > 0) timeString.push(`${remainingDays} day${remainingDays > 1 ? 's' : ''}`);
                                         
                                         return timeString.join(', ') || '0 days';
-                                    })()}</p>                                </div>
+                                    })()}</p>                                
+                                </div>
                                 <div class="form-group">
                                     <label for="userNotes" class="form-label">Notes on User:</label>
-                                    <textarea id="userNotes" class="form-control" rows="3">${currentNotes}</textarea>
+                                    <div class="input-group">
+                                        <div class="btn-group mb-2">
+                                            <button type="button" class="btn btn-sm btn-light" onclick="document.execCommand('bold', false, null)" title="Bold">
+                                                <i class="bi bi-type-bold"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-light" onclick="document.execCommand('italic', false, null)" title="Italic">
+                                                <i class="bi bi-type-italic"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-light" onclick="document.execCommand('underline', false, null)" title="Underline">
+                                                <i class="bi bi-type-underline"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-light" onclick="document.execCommand('formatBlock', false, 'p')" title="Paragraph">
+                                                <i class="bi bi-text-paragraph"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-light" onclick="formatTitle('h1')" title="Title">
+                                                <i class="bi bi-type-h1"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-light" onclick="formatTitle('h2')" title="Subtitle">
+                                                <i class="bi bi-type-h2"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-light" onclick="insertBulletList()" title="Bullet Point">
+                                                <i class="bi bi-list-ul"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div id="userNotes" class="form-control" contenteditable="true" 
+                                        style="min-height: 100px; white-space: pre-wrap;">${currentNotes}</div>
                                 </div>
                                 <button class="btn btn-success mt-3" onclick="saveNotes('${author}')">
                                     Save Comments On User
@@ -230,6 +257,35 @@ function toggleUserNotes(show = true, author = null) {
         `;
     }
 }
+
+window.formatTitle = function(tag) {
+    const selection = window.getSelection();
+    const range = selection.getRangeAt(0);
+    const element = document.createElement(tag);
+    
+    // Get the selected content
+    const content = range.extractContents();
+    element.appendChild(content);
+    
+    // Insert the new element
+    range.insertNode(element);
+    
+    // Move cursor to end of inserted element
+    selection.collapse(element, element.childNodes.length);
+};
+
+// Add this helper function at the global scope:
+window.insertBulletList = function() {
+    const selection = window.getSelection();
+    const range = selection.getRangeAt(0);
+    const list = document.createElement('ul');
+    const listItem = document.createElement('li');
+    listItem.appendChild(document.createElement('br'));
+    list.appendChild(listItem);
+    range.deleteContents();
+    range.insertNode(list);
+    selection.collapse(listItem, 0);
+};
 
 function openReadme() {
     const helpWindow = window.open('', 'Help', 'width=800,height=600');
@@ -899,30 +955,41 @@ async function copyAndModifyCSVFile(sourceFolderHandle, targetFolderHandle, file
             skipEmptyLines: true
         });
 
-        // Add new columns if they don't exist
+        // Filter out any existing Notes_ or Summary_ columns
+        const cleanedFields = parsedData.meta.fields.filter(field => 
+            !field.startsWith('Notes_') && !field.startsWith('Summary_')
+        );
+
+        // Add new columns for current user
         const notesColumn = `Notes_${username}`;
         const summaryColumn = `Summary_${username}`;
-        
-        if (!parsedData.meta.fields.includes(notesColumn)) {
-            parsedData.meta.fields.push(notesColumn);
-        }
-        if (!parsedData.meta.fields.includes(summaryColumn)) {
-            parsedData.meta.fields.push(summaryColumn);
-        }
+        cleanedFields.push(notesColumn, summaryColumn);
 
-        // Initialize new columns for each row
-        parsedData.data.forEach(row => {
-            if (!row[notesColumn]) row[notesColumn] = '';
-            if (!row[summaryColumn]) row[summaryColumn] = '';
+        // Create cleaned data with only the desired columns
+        const cleanedData = parsedData.data.map(row => {
+            const cleanedRow = {};
+            cleanedFields.forEach(field => {
+                if (field === notesColumn || field === summaryColumn) {
+                    cleanedRow[field] = ''; // Initialize new columns as empty
+                } else {
+                    cleanedRow[field] = row[field]; // Copy existing data
+                }
+            });
+            return cleanedRow;
         });
 
         // Filter out empty rows
-        const filteredData = parsedData.data.filter(row => Object.values(row).some(value => value !== ''));
+        const filteredData = cleanedData.filter(row => 
+            Object.values(row).some(value => value !== '')
+        );
         
         // Create new file with modified content
         const newFileHandle = await targetFolderHandle.getFileHandle(fileName, { create: true });
         const writable = await newFileHandle.createWritable();
-        const csvContent = Papa.unparse(filteredData, {
+        const csvContent = Papa.unparse({
+            fields: cleanedFields,
+            data: filteredData
+        }, {
             header: true,
             newline: '\n'
         }).trim();
@@ -1184,18 +1251,25 @@ function displayUsersTable(fields, data) {
                         <tbody>
     `;
     // Add this helper function at the start
-    function createTruncatedCell(text, maxLength = 50) {
-        if (!text || text.length <= maxLength) {
-            return `<td>${text || ''}</td>`;
+    function createTruncatedCell(text, maxLength = 60) {
+        if (!text) return `<td></td>`;
+        
+        // Create a temporary div to parse HTML and get plain text
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = text;
+        const plainText = tempDiv.textContent || tempDiv.innerText || '';
+        
+        if (plainText.length <= maxLength) {
+            return `<td>${plainText}</td>`;
         }
         
-        const truncated = text.substring(0, maxLength);
+        const truncated = plainText.substring(0, maxLength);
         return `
             <td>
                 <div class="truncated-text">
                     <div class="content">
                         <span class="short-text">${truncated}...</span>
-                        <span class="full-text" style="display: none;">${text}</span>
+                        <span class="full-text" style="display: none;">${plainText}</span>
                     </div>
                     <button class="btn btn-link btn-sm expand-btn p-0 ms-1" 
                             onclick="toggleTruncatedText(this, event)">
@@ -1325,6 +1399,28 @@ function displayUsersTable(fields, data) {
     console.log('Table rendered successfully.');
 }
 
+// Add this function at the global scope
+window.toggleTruncatedText = function(button, event) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const content = button.parentElement.querySelector('.content');
+    const shortText = content.querySelector('.short-text');
+    const fullText = content.querySelector('.full-text');
+    const icon = button.querySelector('i');
+    
+    if (fullText.style.display === 'none') {
+        shortText.style.display = 'none';
+        fullText.style.display = 'block';
+        icon.classList.remove('bi-chevron-down');
+        icon.classList.add('bi-chevron-up');
+    } else {
+        shortText.style.display = 'block';
+        fullText.style.display = 'none';
+        icon.classList.remove('bi-chevron-up');
+        icon.classList.add('bi-chevron-down');
+    }
+};
 
 // Display Trajectory File
 async function displayTrajectoryFile(author, isRestoring = false) {
@@ -1459,18 +1555,25 @@ async function displayTrajectoryFile(author, isRestoring = false) {
                                 rowClass = 'background-color: #fff3cd;';
                             }
                         
-                            function createTruncatedCell(text, maxLength = 50) {
-                                if (!text || text.length <= maxLength) {
-                                    return `<td>${text || ''}</td>`;
+                            function createTruncatedCell(text, maxLength = 60) {
+                                if (!text) return `<td></td>`;
+                                
+                                // Create a temporary div to parse HTML and get plain text
+                                const tempDiv = document.createElement('div');
+                                tempDiv.innerHTML = text;
+                                const plainText = tempDiv.textContent || tempDiv.innerText || '';
+                                
+                                if (plainText.length <= maxLength) {
+                                    return `<td>${plainText}</td>`;
                                 }
                                 
-                                const truncated = text.substring(0, maxLength);
+                                const truncated = plainText.substring(0, maxLength);
                                 return `
                                     <td>
                                         <div class="truncated-text">
                                             <div class="content">
                                                 <span class="short-text">${truncated}...</span>
-                                                <span class="full-text" style="display: none;">${text}</span>
+                                                <span class="full-text" style="display: none;">${plainText}</span>
                                             </div>
                                             <button class="btn btn-link btn-sm expand-btn p-0 ms-1" 
                                                     onclick="toggleTruncatedText(this, event)">
@@ -1527,7 +1630,8 @@ async function displayTrajectoryFile(author, isRestoring = false) {
 // Add the saveNotes function to handle saving
 window.saveNotes = async function(author) {
     try {
-        const newNotes = document.getElementById('userNotes').value;
+        // Change from .value to .innerHTML since we're using a contenteditable div
+        const newNotes = document.getElementById('userNotes').innerHTML;
                 
         // Get the Data folder and users.csv file handles
         const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
@@ -1668,9 +1772,34 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                             <h5 class="card-title mb-0">Notes on Post</h5>
                         </div>
                         <div class="card-body">
-                            <textarea id="postNotes" class="form-control mb-2" rows="8"
-                                >${rowData[`Notes_${selectedUser}`] || ''}</textarea>
-                            <button class="btn btn-success" 
+                            <div class="input-group">
+                                <div class="btn-group mb-2">
+                                    <button type="button" class="btn btn-sm btn-light" onclick="document.execCommand('bold', false, null)" title="Bold">
+                                        <i class="bi bi-type-bold"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-light" onclick="document.execCommand('italic', false, null)" title="Italic">
+                                        <i class="bi bi-type-italic"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-light" onclick="document.execCommand('underline', false, null)" title="Underline">
+                                        <i class="bi bi-type-underline"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-light" onclick="document.execCommand('formatBlock', false, 'p')" title="Paragraph">
+                                        <i class="bi bi-text-paragraph"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-light" onclick="formatTitle('h1')" title="Title">
+                                        <i class="bi bi-type-h1"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-light" onclick="formatTitle('h2')" title="Subtitle">
+                                        <i class="bi bi-type-h2"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-light" onclick="insertBulletList()" title="Bullet Point">
+                                        <i class="bi bi-list-ul"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="postNotes" class="form-control" contenteditable="true" 
+                                style="min-height: 150px; white-space: pre-wrap;">${rowData[`Notes_${selectedUser}`] || ''}</div>
+                            <button class="btn btn-success mt-2" 
                                 onclick="savePostNotes('${author}', ${rowNumber})">
                                 Save Comments on Post
                             </button>
@@ -1823,7 +1952,7 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
         window.savePostNotes = async function(author, rowNumber) {
             try {
                 console.log('Starting savePostNotes:', { author, rowNumber });
-                const newNotes = document.getElementById('postNotes').value;
+                const newNotes = document.getElementById('postNotes').innerHTML;
                 
                 // Get the trajectory file
                 const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
@@ -1842,7 +1971,7 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                     const summaryColumn = `Summary_${selectedUser}`;
                     const currentSummary = parsedData.data[rowNumber - 1][summaryColumn] || '';
                     
-                    if (newNotes.trim() !== '') {
+                    if (newNotes.replace(/<[^>]*>/g, '').trim() !== '') {
                         // Update trajectory file summary
                         if (!currentSummary.includes('Notes saved')) {
                             parsedData.data[rowNumber - 1][summaryColumn] = 
@@ -2174,6 +2303,26 @@ style.textContent = `
         overflow: hidden;
     }
 
+    .formatted-content {
+        white-space: normal;
+    }
+
+    .formatted-content h1,
+    .formatted-content h2 {
+        margin: 0.5em 0;
+        font-size: 1.2em;
+        font-weight: bold;
+    }
+
+    .formatted-content ul {
+        margin: 0.5em 0;
+        padding-left: 20px;
+    }
+
+    .formatted-content p {
+        margin: 0.5em 0;
+    }
+    
     .footer {
         text-align: center;
         padding: 20px;
