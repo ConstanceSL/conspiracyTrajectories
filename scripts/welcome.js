@@ -11,6 +11,18 @@ let isRestoringState = false;
 let lastViewedPost = null;
 
 
+async function loadChartJS() {
+    if (window.Chart) return; // Skip if already loaded
+    
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
 // Function to show a toast message
 function showToast(message) {
     const toast = document.createElement('div');
@@ -41,6 +53,52 @@ function showToast(message) {
             document.body.removeChild(toast);
         }, 300);
     }, 2000);
+}
+
+function hasDoneTag(notes) {
+    if (!notes) return false;
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = notes;
+    const plainText = tempDiv.textContent || tempDiv.innerText || '';
+    return plainText.includes('!DONE!');
+}
+
+function isOnlyAssignedTag(notes) {
+    if (!notes) return false;
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = notes;
+    const plainText = (tempDiv.textContent || tempDiv.innerText || '').trim();
+    return plainText === '!ASSIGNED!';
+}
+
+// Helper function for creating truncated cells
+function createTruncatedCell(text, maxLength = 50) {
+    if (!text) return `<td></td>`;
+    
+    // Create a temporary div to parse HTML and get plain text
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = text;
+    const plainText = tempDiv.textContent || tempDiv.innerText || '';
+    
+    if (plainText.length <= maxLength) {
+        return `<td>${plainText}</td>`;
+    }
+    
+    const truncated = plainText.substring(0, maxLength);
+    return `
+        <td>
+            <div class="truncated-text">
+                <div class="content">
+                    <span class="short-text">${truncated}...</span>
+                    <span class="full-text" style="display: none;">${plainText}</span>
+                </div>
+                <button class="btn btn-link btn-sm expand-btn p-0 ms-1" 
+                        onclick="toggleTruncatedText(this, event)">
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </div>
+        </td>
+    `;
 }
 
 // Function to update URL state
@@ -356,6 +414,27 @@ function createCompactHeader() {
         `;
     }
 }
+
+// Helper function for toggling truncated text
+window.toggleTruncatedText = function(button, event) {
+    event.stopPropagation();
+    const container = button.closest('.truncated-text');
+    const fullText = container.querySelector('.full-text');
+    const shortText = container.querySelector('.short-text');
+    const icon = button.querySelector('i');
+    
+    if (fullText.style.display === 'none') {
+        shortText.style.display = 'none';
+        fullText.style.display = 'inline';
+        icon.classList.remove('bi-chevron-down');
+        icon.classList.add('bi-chevron-up');
+    } else {
+        shortText.style.display = 'inline';
+        fullText.style.display = 'none';
+        icon.classList.remove('bi-chevron-up');
+        icon.classList.add('bi-chevron-down');
+    }
+};
 
 // Add this after checkBrowserCompatibility in loadWelcomeScreen
 async function loadWelcomeScreen() {
@@ -1219,141 +1298,100 @@ function displayUsersTable(fields, data) {
 
     // Create table HTML
     let tableHTML = `
-            <div class="table-container">
-                <div class="table-header d-flex justify-content-between align-items-center">
-                    <h5>Users Dataset</h5>
-                    <div class="d-flex align-items-center gap-2">
-                        <label for="sortSelect" class="text-white mb-0">Sort by:</label>
-                        <select id="sortSelect" class="form-select form-select-sm" style="width: auto;">
-                            ${fields.map(field => {
-                                const displayName = field.startsWith('Notes_') ? 'Notes' : 
-                                                  (columnDisplayNames[field] || field);
-                                return `<option value="${field}">${displayName}</option>`;
-                            }).join('')}
-                        </select>
-                        <button id="sortDirection" class="btn btn-sm btn-light">
-                            <i class="bi bi-arrow-down"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="table-responsive">
-                    <table id="users-table" class="table">
-                        <thead style="position: sticky; top: 0; background: white; z-index: 1; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
-                            <tr>
-                                ${fields.map(field => {
-                                    if (field.startsWith('Notes_')) {
-                                        return '<th scope="col">Notes</th>';
-                                    }
-                                    return `<th scope="col">${columnDisplayNames[field] || field}</th>`;
-                                }).join('')}
-                            </tr>
-                        </thead>
-                        <tbody>
-    `;
-    // Add this helper function at the start
-    function createTruncatedCell(text, maxLength = 60) {
-        if (!text) return `<td></td>`;
-        
-        // Create a temporary div to parse HTML and get plain text
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = text;
-        const plainText = tempDiv.textContent || tempDiv.innerText || '';
-        
-        if (plainText.length <= maxLength) {
-            return `<td>${plainText}</td>`;
-        }
-        
-        const truncated = plainText.substring(0, maxLength);
-        return `
-            <td>
-                <div class="truncated-text">
-                    <div class="content">
-                        <span class="short-text">${truncated}...</span>
-                        <span class="full-text" style="display: none;">${plainText}</span>
-                    </div>
-                    <button class="btn btn-link btn-sm expand-btn p-0 ms-1" 
-                            onclick="toggleTruncatedText(this, event)">
-                        <i class="bi bi-chevron-down"></i>
+        <div class="table-container">
+            <div class="table-header d-flex justify-content-between align-items-center">
+                <h5>Users Dataset</h5>
+                <div class="d-flex align-items-center gap-2">
+                    <label for="sortSelect" class="text-white mb-0">Sort by:</label>
+                    <select id="sortSelect" class="form-select form-select-sm" style="width: auto;">
+                        ${fields.map(field => {
+                            const displayName = field.startsWith('Notes_') ? 'Notes' : 
+                                              (columnDisplayNames[field] || field);
+                            return `<option value="${field}">${displayName}</option>`;
+                        }).join('')}
+                    </select>
+                    <button id="sortDirection" class="btn btn-sm btn-light">
+                        <i class="bi bi-arrow-down"></i>
                     </button>
                 </div>
-            </td>
-        `;
-    }
+            </div>
+            <div class="table-responsive">
+                <table id="users-table" class="table">
+                    <thead>
+                        <tr>
+                            ${fields.map(field => {
+                                if (field.startsWith('Notes_')) {
+                                    return '<th scope="col">Notes</th>';
+                                }
+                                return `<th scope="col">${columnDisplayNames[field] || field}</th>`;
+                            }).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
 
-    window.toggleTruncatedText = function(button, event) {
-        event.stopPropagation();
-        const container = button.closest('.truncated-text');
-        const fullText = container.querySelector('.full-text');
-        const shortText = container.querySelector('.short-text');
-        const isExpanded = container.classList.contains('expanded');
-        
-        if (isExpanded) {
-            fullText.style.display = 'none';
-            shortText.style.display = 'inline';
-            container.classList.remove('expanded');
-        } else {
-            fullText.style.display = 'inline';
-            shortText.style.display = 'none';
-            container.classList.add('expanded');
-        }
-        
-        // Rotate the chevron
-        button.querySelector('i').style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(180deg)';
-    };
-    // Create rows with conditional formatting and make them clickable
+    // Create rows with conditional formatting
+    // Inside displayUsersTable, update the row creation part:
     data.forEach(row => {
         if (row && typeof row === 'object') {
-            const summaryColumn = fields.find(field => field.startsWith('Summary_'));
-            const summaryValue = summaryColumn ? row[summaryColumn] : '';
-            
-            let rowClass = '';
-            if (summaryValue === 'Done') {
-                rowClass = 'background-color: #d4edda;';
-            } else if (summaryValue && summaryValue !== 'Done') {
-                rowClass = 'background-color: #fff3cd;';
-            }
+            const notesField = fields.find(field => field.startsWith('Notes_'));
+        const summaryField = fields.find(field => field.startsWith('Summary_'));
+        const notes = notesField ? row[notesField] : '';
+        const summaryValue = summaryField ? row[summaryField] : '';
+        
+        // Determine row class based on multiple conditions
+        let rowClass;
+        if (window.hasDoneTag(notes)) {
+            rowClass = 'table-success';
+        } else if (window.isOnlyAssignedTag(notes)) {
+            rowClass = 'table-danger';
+        } else if (summaryValue === 'Notes saved') {
+            rowClass = 'table-warning';
+        } else {
+            rowClass = '';
+        }
 
-            tableHTML += `<tr style="${rowClass}; cursor: pointer;" 
-                            onclick="displayTrajectoryFile('${row.Author}')" 
-                            title="Click to view trajectory file">`;
-            
-            fields.forEach(field => {
-                if (field === 'DaysDifference') {
-                    const days = row[field];
-                    if (!days && days !== 0) {
-                        tableHTML += '<td>N/A</td>';
-                    } else {
-                        const years = Math.floor(days / 365);
-                        const months = Math.floor((days % 365) / 30);
-                        const remainingDays = Math.floor(days % 30);
-                        
-                        let timeString = [];
-                        if (years > 0) timeString.push(`${years}y`);
-                        if (months > 0) timeString.push(`${months}m`);
-                        if (remainingDays > 0) timeString.push(`${remainingDays}d`);
-                        
-                        tableHTML += `<td>${timeString.join(', ') || '0d'}</td>`;
-                    }
-                } else if (field.startsWith('Notes_')) {
-                                    // Handle Notes with truncation
-                    tableHTML += createTruncatedCell(row[field]);
+        tableHTML += `
+            <tr class="${rowClass}" style="cursor: pointer;" 
+                onclick="displayTrajectoryFile('${row.Author}')" 
+                title="Click to view trajectory file">`;
+        
+        fields.forEach(field => {
+            if (field === 'DaysDifference') {
+                const days = row[field];
+                if (!days && days !== 0) {
+                    tableHTML += '<td>N/A</td>';
                 } else {
-                    const value = row[field];
-                    tableHTML += `<td>${value !== undefined && value !== null ? value : ''}</td>`;
+                    const years = Math.floor(days / 365);
+                    const months = Math.floor((days % 365) / 30);
+                    const remainingDays = Math.floor(days % 30);
+                    
+                    let timeString = [];
+                    if (years > 0) timeString.push(`${years}y`);
+                    if (months > 0) timeString.push(`${months}m`);
+                    if (remainingDays > 0) timeString.push(`${remainingDays}d`);
+                    
+                    tableHTML += `<td>${timeString.join(', ') || '0d'}</td>`;
                 }
+            } else if (field.startsWith('Notes_')) {
+                tableHTML += window.createTruncatedCell(row[field]);
+            } else {
+                const value = row[field];
+                tableHTML += `<td>${value !== undefined && value !== null ? value : ''}</td>`;
+            }
             });
             tableHTML += '</tr>';
         }
     });
-
+            
 
     tableHTML += `
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
         </div>
     `;
 
-    // Update the DOM
     filePreviewDiv.innerHTML = tableHTML;
 
     // Add sorting functionality
@@ -1370,7 +1408,6 @@ function displayUsersTable(fields, data) {
             let aVal = a.children[fields.indexOf(field)].textContent;
             let bVal = b.children[fields.indexOf(field)].textContent;
 
-            // Handle numeric fields
             if (field === 'TotalPosts' || field === 'Conspiracy' || field === 'DaysDifference') {
                 aVal = parseFloat(aVal) || 0;
                 bVal = parseFloat(bVal) || 0;
@@ -1381,7 +1418,6 @@ function displayUsersTable(fields, data) {
             return 0;
         });
 
-        // Clear and re-append sorted rows
         tbody.innerHTML = '';
         rows.forEach(row => tbody.appendChild(row));
     }
@@ -1393,10 +1429,7 @@ function displayUsersTable(fields, data) {
         sortTable();
     });
 
-    // Initial sort
     sortTable();
-
-    console.log('Table rendered successfully.');
 }
 
 // Add this function at the global scope
@@ -1421,6 +1454,327 @@ window.toggleTruncatedText = function(button, event) {
         icon.classList.add('bi-chevron-down');
     }
 };
+
+// Add this function to create and display the trajectory graph
+async function displayTrajectoryGraph(author) {
+    try {
+        await loadChartJS();
+        const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
+        const trajectoriesFolderHandle = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
+        const trajectoryFileHandle = await trajectoriesFolderHandle.getFileHandle(`${author}.csv`);
+        const file = await trajectoryFileHandle.getFile();
+        const content = await file.text();
+        
+        const parsedData = Papa.parse(content, {
+            header: true,
+            skipEmptyLines: true,
+            dynamicTyping: true,
+        });
+
+        // Process all data formats upfront
+        const postsByMonth = processPostingFrequency(parsedData.data, 'month');
+        const postsByYear = processPostingFrequency(parsedData.data, 'year');
+        const postsByDay = processPostingFrequency(parsedData.data, 'day');
+        
+        // Get unique years for the dropdown
+        const years = [...new Set(parsedData.data.map(post => post.year))].sort();
+        
+        // Create modal with controls
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.id = 'trajectoryGraphModal';
+        modal.innerHTML = `
+            <div class="modal-dialog modal-xl" style="max-width: 90vw;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Posting Activity for ${author}</h5>
+                        <div class="d-flex gap-3 align-items-center">
+                            <div class="btn-group">
+                                <button class="btn btn-outline-primary active" data-view="month">Monthly</button>
+                                <button class="btn btn-outline-primary" data-view="year">Yearly</button>
+                                <button class="btn btn-outline-primary" data-view="day">Daily</button>
+                            </div>
+                            <select id="yearSelect" class="form-select" style="display: none;">
+                                ${years.map(year => `<option value="${year}">${year}</option>`).join('')}
+                            </select>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                    </div>
+                    <div class="modal-body">
+                        <div style="height: 500px; overflow-x: auto;">
+                            <div style="min-width: 1200px; height: 100%;">
+                                <canvas id="trajectoryChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        const modalInstance = new bootstrap.Modal(modal);
+        modalInstance.show();
+
+        let currentChart = null;
+
+        function createChart(type, data) {
+            if (currentChart) {
+                currentChart.destroy();
+            }
+        
+            // Helper function to format the view type
+            function formatViewType(type) {
+                const viewTypes = {
+                    'day': 'Daily',
+                    'month': 'Monthly',
+                    'year': 'Yearly'
+                };
+                return viewTypes[type] || type.charAt(0).toUpperCase() + type.slice(1);
+            }
+        
+            const ctx = document.getElementById('trajectoryChart').getContext('2d');
+            currentChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: `Posts per ${formatViewType(type)}`,
+                        data: data.counts,
+                        backgroundColor: '#4c8c8c',
+                        borderColor: '#284949',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Posts'
+                            },
+                            ticks: { stepSize: 1 }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: formatViewType(type)
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `Posting Frequency (${formatViewType(type)} View)`,
+                            padding: 20,
+                            font: { size: 16 }
+                        },
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        // Event listeners for view changes
+        const viewButtons = modal.querySelectorAll('[data-view]');
+        const yearSelect = modal.querySelector('#yearSelect');
+
+        viewButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                viewButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                const view = button.dataset.view;
+                yearSelect.style.display = view === 'day' ? 'block' : 'none';
+                
+                if (view === 'day') {
+                    const yearData = postsByDay[yearSelect.value];
+                    createChart('day', yearData);
+                } else if (view === 'month') {
+                    createChart('month', postsByMonth);
+                } else {
+                    createChart('year', postsByYear);
+                }
+            });
+        });
+
+        yearSelect.addEventListener('change', () => {
+            const yearData = postsByDay[yearSelect.value];
+            createChart('day', yearData);
+        });
+
+        // Initial chart
+        createChart('month', postsByMonth);
+
+        // Cleanup
+        modal.addEventListener('hidden.bs.modal', () => {
+            if (currentChart) {
+                currentChart.destroy();
+            }
+            document.body.removeChild(modal);
+        });
+
+    } catch (error) {
+        console.error('Error creating trajectory graph:', error);
+        alert('Failed to create trajectory graph. Please try again.');
+    }
+}
+
+// Updated processing function to handle different time scales and empty periods
+function processPostingFrequency(data, timeScale = 'month') {
+    const posts = new Map();
+    const monthMap = {
+        'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+        'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+        'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+    };
+
+    // Helper function to process gaps in any time series
+    function processGaps(entries) {
+        const processedDates = [];
+        let emptyCount = 0;
+        let lastNonEmptyIndex = -1;
+
+        entries.forEach((entry, index) => {
+            if (entry[1] === 0) {
+                emptyCount++;
+                if (emptyCount === 3 && index < entries.length - 1) {
+                    processedDates.push(['...', null]);
+                }
+            } else {
+                if (emptyCount <= 5 || lastNonEmptyIndex === -1) {
+                    // Add skipped empty dates
+                    for (let i = 0; i < emptyCount; i++) {
+                        processedDates.push(entries[index - emptyCount + i]);
+                    }
+                }
+                processedDates.push(entry);
+                lastNonEmptyIndex = processedDates.length - 1;
+                emptyCount = 0;
+            }
+        });
+
+        return processedDates;
+    }
+
+    if (timeScale === 'day') {
+        // Process daily data by year
+        const postsByYear = {};
+        
+        data.forEach(post => {
+            if (post.year && post.day_month) {
+                const [day, monthStr] = post.day_month.split(' ');
+                const month = monthMap[monthStr];
+                const date = `${post.year}-${month}-${day.padStart(2, '0')}`;
+                
+                if (!postsByYear[post.year]) {
+                    postsByYear[post.year] = new Map();
+                }
+                postsByYear[post.year].set(date, (postsByYear[post.year].get(date) || 0) + 1);
+            }
+        });
+
+        // Process each year's data
+        Object.keys(postsByYear).forEach(year => {
+            const yearData = postsByYear[year];
+            const sortedDates = Array.from(yearData.keys()).sort();
+            
+            // Fill in missing days
+            const start = new Date(sortedDates[0]);
+            const end = new Date(sortedDates[sortedDates.length - 1]);
+            
+            const allDates = [];
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                const dateStr = d.toISOString().split('T')[0];
+                allDates.push([dateStr, yearData.get(dateStr) || 0]);
+            }
+
+            // Process gaps in daily data
+            const processedDates = processGaps(allDates);
+            
+            postsByYear[year] = {
+                labels: processedDates.map(([date]) => 
+                    date === '...' ? date : new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+                counts: processedDates.map(([, count]) => count)
+            };
+        });
+
+        return postsByYear;
+    }
+
+    // Process monthly or yearly data
+    data.forEach(post => {
+        if (post.year && post.day_month) {
+            const [day, monthStr] = post.day_month.split(' ');
+            const month = monthMap[monthStr];
+            
+            let key;
+            if (timeScale === 'month') {
+                key = `${post.year}-${month}`;
+            } else {
+                key = `${post.year}`;
+            }
+            
+            posts.set(key, (posts.get(key) || 0) + 1);
+        }
+    });
+
+    // Fill in empty periods
+    const sortedEntries = Array.from(posts.entries()).sort();
+    if (sortedEntries.length > 0) {
+        const [startDate] = sortedEntries[0];
+        const [endDate] = sortedEntries[sortedEntries.length - 1];
+        
+        const allDates = [];
+        
+        if (timeScale === 'month') {
+            const [startYear, startMonth] = startDate.split('-').map(Number);
+            const [endYear, endMonth] = endDate.split('-').map(Number);
+            
+            let currentYear = startYear;
+            let currentMonth = startMonth;
+            
+            while (currentYear < endYear || (currentYear === endYear && currentMonth <= endMonth)) {
+                const key = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+                allDates.push([key, posts.get(key) || 0]);
+                
+                currentMonth++;
+                if (currentMonth > 12) {
+                    currentMonth = 1;
+                    currentYear++;
+                }
+            }
+        } else { // year view
+            const startYear = parseInt(startDate);
+            const endYear = parseInt(endDate);
+            
+            for (let year = startYear; year <= endYear; year++) {
+                allDates.push([String(year), posts.get(String(year)) || 0]);
+            }
+        }
+
+        const processedDates = processGaps(allDates);
+
+        return {
+            labels: processedDates.map(([date]) => {
+                if (date === '...') return date;
+                if (timeScale === 'month') {
+                    const [year, month] = date.split('-');
+                    return `${Object.keys(monthMap)[Number(month) - 1]} ${year}`;
+                }
+                return date;
+            }),
+            counts: processedDates.map(([, count]) => count)
+        };
+    }
+
+    return {
+        labels: sortedEntries.map(([date]) => date),
+        counts: sortedEntries.map(([, count]) => count)
+    };
+}
+
 
 // Display Trajectory File
 async function displayTrajectoryFile(author, isRestoring = false) {
@@ -1518,6 +1872,9 @@ async function displayTrajectoryFile(author, isRestoring = false) {
                             <button class="btn btn-primary" onclick="reloadUsersTable()">
                                 ← Back to Users Table
                             </button>
+                            <button class="btn btn-primary" onclick="displayTrajectoryGraph('${author}')">
+                                📊 View Activity Graph
+                            </button>
                             ${lastViewedPost ? `
                                 <button class="btn btn-primary" 
                                     onclick="displayRowDetails('${author}', ${lastViewedPost.rowNumber}, ${JSON.stringify(lastViewedPost.rowData).replace(/"/g, '&quot;')})">
@@ -1547,55 +1904,33 @@ async function displayTrajectoryFile(author, isRestoring = false) {
                         <tbody>
                         ${currentData.map((row, index) => {
                             const absoluteIndex = startIndex + index;
+                            const notes = row[`Notes_${selectedUser}`];
                             const summaryValue = row[`Summary_${selectedUser}`];
-                            let rowClass = '';
-                            if (summaryValue === 'Done') {
-                                rowClass = 'background-color: #d4edda;';
-                            } else if (summaryValue && summaryValue !== 'Done') {
-                                rowClass = 'background-color: #fff3cd;';
+                            
+                            // Determine row class based on multiple conditions
+                            let rowClass;
+                            if (window.hasDoneTag(notes)) {
+                                rowClass = 'table-success';
+                            } else if (summaryValue === 'Notes saved') {
+                                rowClass = 'table-warning'; 
+                            } else if (window.isOnlyAssignedTag(notes)) {
+                                rowClass = 'table-danger';
+                            } else {
+                                rowClass = '';
                             }
                         
-                            function createTruncatedCell(text, maxLength = 60) {
-                                if (!text) return `<td></td>`;
-                                
-                                // Create a temporary div to parse HTML and get plain text
-                                const tempDiv = document.createElement('div');
-                                tempDiv.innerHTML = text;
-                                const plainText = tempDiv.textContent || tempDiv.innerText || '';
-                                
-                                if (plainText.length <= maxLength) {
-                                    return `<td>${plainText}</td>`;
-                                }
-                                
-                                const truncated = plainText.substring(0, maxLength);
-                                return `
-                                    <td>
-                                        <div class="truncated-text">
-                                            <div class="content">
-                                                <span class="short-text">${truncated}...</span>
-                                                <span class="full-text" style="display: none;">${plainText}</span>
-                                            </div>
-                                            <button class="btn btn-link btn-sm expand-btn p-0 ms-1" 
-                                                    onclick="toggleTruncatedText(this, event)">
-                                                <i class="bi bi-chevron-down"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                `;
-                            }
-
                             return `
-                            <tr style="${rowClass}; cursor: pointer;" 
-                                onclick="displayRowDetails('${author}', ${absoluteIndex + 1}, ${JSON.stringify(row).replace(/"/g, '&quot;')})">
-                                <td>${absoluteIndex + 1}</td>
-                                <td>${row.year || ''}</td>
-                                <td>${row.day_month || ''}</td>
-                                <td>${row.title || ''}</td>
-                                ${createTruncatedCell(row[`Notes_${selectedUser}`])}
-                                <td>${summaryValue || ''}</td>
-                            </tr>
-                        `;
-                    }).join('')}
+                                <tr class="${rowClass}" style="cursor: pointer;" 
+                                    onclick="displayRowDetails('${author}', ${absoluteIndex + 1}, ${JSON.stringify(row).replace(/"/g, '&quot;')})">
+                                    <td>${absoluteIndex + 1}</td>
+                                    <td>${row.year || ''}</td>
+                                    <td>${row.day_month || ''}</td>
+                                    <td>${row.title || ''}</td>
+                                    ${window.createTruncatedCell(notes)}
+                                    <td>${summaryValue || ''}</td>
+                                </tr>
+                            `;
+                        }).join('')}
                         </tbody>
                     </table>
                 </div>
@@ -2181,6 +2516,31 @@ style.textContent = `
         color: white;
     }
 
+
+    /* Updated trajectory view buttons */
+    .btn-group .btn-outline-primary {
+        background-color: #4c8c8c;
+        color: white;
+        border-color: #4c8c8c;
+        transition: all 0.2s ease;
+    }
+
+    .btn-group .btn-outline-primary:hover {
+        background-color: #315a5a;
+        border-color: #315a5a;
+        color: white;
+    }
+
+    .btn-group .btn-outline-primary.active {
+        background-color: #162828;
+        border-color: #162828;
+        color: white;
+        box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+    }
+
+    .btn-group .btn-outline-primary:focus {
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
     /* User selection styles */
     .user-btn {
         padding: 8px 20px;
@@ -2258,6 +2618,23 @@ style.textContent = `
         position: sticky;
         top: 0;
         z-index: 10;
+    }
+
+    .table-success {
+        background-color: rgba(25, 135, 84, 0.15) !important;
+    }
+
+    .table-danger {
+        background-color: rgba(255, 0, 0, 0.1) !important;
+    }
+
+    /* Add hover states for better UX */
+    .table-success:hover {
+        background-color: rgba(25, 135, 84, 0.25) !important;
+    }
+
+    .table-danger:hover {
+        background-color: rgba(255, 0, 0, 0.15) !important;
     }
 
     .truncated-text {
