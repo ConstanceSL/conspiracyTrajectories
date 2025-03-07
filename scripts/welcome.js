@@ -2010,6 +2010,47 @@ window.saveNotes = async function(author) {
     }
 };
 
+window.saveAnalysis = async function(author, rowNumber) {
+    try {
+        const topic = document.getElementById('postTopic').value;
+        const belief = document.getElementById('beliefDegree').value;
+        const reaction = document.getElementById('communityReaction').value;
+        const sources = document.getElementById('sourcesUsed').value;
+        
+        // Get the trajectory file
+        const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
+        const trajectoriesFolderHandle = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
+        const trajectoryFileHandle = await trajectoriesFolderHandle.getFileHandle(`${author}.csv`);
+        
+        // Read current content
+        const file = await trajectoryFileHandle.getFile();
+        const content = await file.text();
+        const parsedData = Papa.parse(content, { header: true });
+        
+        // Update analysis for the specific row
+        if (parsedData.data[rowNumber - 1]) {
+            parsedData.data[rowNumber - 1][`Topic_${selectedUser}`] = topic;
+            parsedData.data[rowNumber - 1][`Belief_${selectedUser}`] = belief;
+            parsedData.data[rowNumber - 1][`Reaction_${selectedUser}`] = reaction;
+            parsedData.data[rowNumber - 1][`Sources_${selectedUser}`] = sources;
+            
+            // Write back to trajectory file
+            const csvContent = Papa.unparse(parsedData.data);
+            const writable = await trajectoryFileHandle.createWritable();
+            await writable.write(csvContent);
+            await writable.close();
+            
+            showToast('Analysis saved successfully!');
+            
+            // Refresh the display to show updated data
+            await displayRowDetails(author, rowNumber, parsedData.data[rowNumber - 1], parsedData.data);
+        }
+    } catch (error) {
+        console.error('Error saving analysis:', error);
+        alert('Failed to save analysis. Please try again.');
+    }
+};
+
 // Navigation function
 function navigateTrajectoryPage(author, page) {
     updateURLState({ 
@@ -2100,8 +2141,9 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
             </div>
 
             <div class="row mb-4">
-                <!-- Notes Section -->
+                <!-- Top Row -->
                 <div class="col-md-6 mb-3">
+                    <!-- Notes Section -->
                     <div class="card h-100">
                         <div class="card-header">
                             <h5 class="card-title mb-0">Notes on Post</h5>
@@ -2142,19 +2184,19 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                     </div>
                 </div>
 
-                <!-- Summary Section -->
                 <div class="col-md-6 mb-3">
+                    <!-- Summary Section -->
                     <div class="card h-100">
                         <div class="card-header">
                             <h5 class="card-title mb-0">Post Summary</h5>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body"> 
                             <p><strong>Date:</strong> ${rowData.year}-${rowData.day_month}</p>
                             <p><strong>Status:</strong> ${rowData[`Summary_${selectedUser}`] || 'Not reviewed'}</p>
                             <p><strong>Engagement:</strong></p>
                             <ul class="list-unstyled ms-3">
-                                <li>👍 ${rowData.ups} upvotes</li>
-                                <li>👎 ${rowData.downs} downvotes</li>
+                                <li> ${rowData.ups} upvotes</li>
+                                <li> ${rowData.downs} downvotes</li>
                                 <li>💬 ${rowData.num_comments} comments</li>
                             </ul>
                             ${rowData.total_awards_received > 0 ? 
@@ -2174,6 +2216,60 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                 : ''}
                         </div>
                     </div>
+                </div>
+
+                <!-- Bottom Row - Analysis Form -->
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Post Analysis</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="analysisForm" class="row">
+                                <div class="col-md-3 mb-3">
+                                    <label for="postTopic" class="form-label">Topic of the post</label>
+                                    <input type="text" class="form-control" id="postTopic" 
+                                           value="${rowData[`Topic_${selectedUser}`] || ''}"
+                                           placeholder="Enter the main topic">
+                                </div>
+                                
+                                <div class="col-md-3 mb-3">
+                                    <label for="beliefDegree" class="form-label">Degree of belief</label>
+                                    <select class="form-select" id="beliefDegree">
+                                        <option value="">Select belief level</option>
+                                        ${['Unknown', 'Disbelief', 'Doubt', 'Open question', 'Moderate belief', 'Strong belief']
+                                            .map(option => `
+                                                <option value="${option}" 
+                                                    ${rowData[`Belief_${selectedUser}`] === option ? 'selected' : ''}>
+                                                    ${option}
+                                                </option>
+                                            `).join('')}
+                                    </select>
+                                </div>
+                                
+                                <div class="col-md-3 mb-3">
+                                    <label for="communityReaction" class="form-label">Reaction of the community</label>
+                                    <input type="text" class="form-control" id="communityReaction" 
+                                           value="${rowData[`Reaction_${selectedUser}`] || ''}"
+                                           placeholder="Describe community's response">
+                                </div>
+                                
+                                <div class="col-md-3 mb-3">
+                                    <label for="sourcesUsed" class="form-label">Sources used</label>
+                                    <input type="text" class="form-control" id="sourcesUsed" 
+                                           value="${rowData[`Sources_${selectedUser}`] || ''}"
+                                           placeholder="List sources cited">
+                                </div>
+                                
+                                <div class="col-12">
+                                    <button type="button" class="btn btn-success" 
+                                            onclick="saveAnalysis('${author}', ${rowNumber})">
+                                        Save Analysis
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>    
                 </div>
             </div>
 
