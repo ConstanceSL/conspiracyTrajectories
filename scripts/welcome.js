@@ -648,11 +648,12 @@ async function updateCSVFile(sourceFolder, targetFolder, fileName, username) {
 async function selectDataFolder() {
     try {
         // Check browser compatibility first
-        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-        if (!isChrome) {
-            alert('This app is only supported in Google Chrome. Please open the app in Chrome for full functionality.');
+        const isChromium = /Chrome/.test(navigator.userAgent) || /Edg/.test(navigator.userAgent);
+        const isGoogleOrMicrosoft = /Google Inc/.test(navigator.vendor) || /Microsoft/.test(navigator.vendor);
+        if (!isChromium || !isGoogleOrMicrosoft) {
+            alert('This app is only supported in Google Chrome or Microsoft Edge. Please open the app in a supported browser for full functionality.');
             document.body.innerHTML = '<h2 style="color: red; text-align: center;">Unsupported Browser</h2>';
-            throw new Error('Unsupported browser detected. Please use Google Chrome.');
+            throw new Error('Unsupported browser detected. Please use Google Chrome or Microsoft Edge.');
         }
 
         // Only show directory picker if browser is compatible
