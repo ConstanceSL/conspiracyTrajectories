@@ -2312,89 +2312,13 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                 </div>
             </div>
         `;
-        window.savePostNotes = async function(author, rowNumber) {
-            try {
-                console.log('Starting savePostNotes:', { author, rowNumber });
-                const newNotes = document.getElementById('postNotes').innerHTML;
-                
-                // Get the trajectory file
-                const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
-                const trajectoriesFolderHandle = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
-                const trajectoryFileHandle = await trajectoriesFolderHandle.getFileHandle(`${author}.csv`);
-                
-                // Read current content
-                const file = await trajectoryFileHandle.getFile();
-                const content = await file.text();
-                const parsedData = Papa.parse(content, { header: true });
-                
-                // Update notes for the specific row
-                if (parsedData.data[rowNumber - 1]) {
-                    // Update notes in trajectory file
-                    parsedData.data[rowNumber - 1][`Notes_${selectedUser}`] = newNotes;
-                    const summaryColumn = `Summary_${selectedUser}`;
-                    const currentSummary = parsedData.data[rowNumber - 1][summaryColumn] || '';
-                    
-                    if (newNotes.replace(/<[^>]*>/g, '').trim() !== '') {
-                        // Update trajectory file summary
-                        if (!currentSummary.includes('Notes saved')) {
-                            parsedData.data[rowNumber - 1][summaryColumn] = 
-                                currentSummary ? `${currentSummary}, Notes saved` : 'Notes saved';
-                        }
-        
-                        // Update users.csv
-                        try {
-                            console.log('Getting users.csv file');
-                            const usersCSVHandle = await dataFolderHandle.getFileHandle('users.csv');
-                            const usersFile = await usersCSVHandle.getFile();
-                            const usersContent = await usersFile.text();
-                            const usersParsedData = Papa.parse(usersContent, { header: true });
-                            
-                            const authorIndex = usersParsedData.data.findIndex(row => row.Author === author);
-                            console.log('Author index in users.csv:', authorIndex);
-                            
-                            if (authorIndex !== -1) {
-                                const userSummaryColumn = `Summary_${selectedUser}`;
-                                const userCurrentSummary = usersParsedData.data[authorIndex][userSummaryColumn] || '';
-                                
-                                if (!userCurrentSummary.includes('Notes saved')) {
-                                    console.log('Updating users.csv summary');
-                                    usersParsedData.data[authorIndex][userSummaryColumn] = 
-                                        userCurrentSummary ? `${userCurrentSummary}, Notes saved` : 'Notes saved';
-                                    
-                                    const usersCsvContent = Papa.unparse(usersParsedData.data);
-                                    const usersWritable = await usersCSVHandle.createWritable();
-                                    await usersWritable.write(usersCsvContent);
-                                    await usersWritable.close();
-                                    console.log('Successfully updated users.csv');
-                                }
-                            }
-                        } catch (error) {
-                            console.error('Error updating users.csv:', error);
-                        }
-                    }
-                    
-                    // Write back to trajectory file
-                    const csvContent = Papa.unparse(parsedData.data);
-                    const writable = await trajectoryFileHandle.createWritable();
-                    await writable.write(csvContent);
-                    await writable.close();
-                    showToast('Notes saved successfully!');  // Replace alert here
-
-                    // Refresh the display
-                    await displayRowDetails(author, rowNumber, parsedData.data[rowNumber - 1], parsedData.data);
-                }
-            } catch (error) {
-                console.error('Error saving post notes:', error);
-                alert('Failed to save notes. Please try again.');
-            }
-        }    
 
     } catch (error) {
         console.error('Error displaying row details:', error);
         alert('Failed to display row details. Please try again.');
     }
 }
-           
+
 // Function to reload the users table
 async function reloadUsersTable() {
     try {
@@ -2781,3 +2705,81 @@ document.addEventListener('DOMContentLoaded', loadWelcomeScreen);
 window.addEventListener('hashchange', restoreStateFromURL);
 
 window.updateSendButton = updateSendButton;
+
+// Move savePostNotes outside of displayRowDetails
+window.savePostNotes = async function(author, rowNumber) {
+    try {
+        console.log('Starting savePostNotes:', { author, rowNumber });
+        const newNotes = document.getElementById('postNotes').innerHTML;
+        
+        // Get the trajectory file
+        const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
+        const trajectoriesFolderHandle = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
+        const trajectoryFileHandle = await trajectoriesFolderHandle.getFileHandle(`${author}.csv`);
+        
+        // Read current content
+        const file = await trajectoryFileHandle.getFile();
+        const content = await file.text();
+        const parsedData = Papa.parse(content, { header: true });
+        
+        // Update notes for the specific row
+        if (parsedData.data[rowNumber - 1]) {
+            // Update notes in trajectory file
+            parsedData.data[rowNumber - 1][`Notes_${selectedUser}`] = newNotes;
+            const summaryColumn = `Summary_${selectedUser}`;
+            const currentSummary = parsedData.data[rowNumber - 1][summaryColumn] || '';
+            
+            if (newNotes.replace(/<[^>]*>/g, '').trim() !== '') {
+                // Update trajectory file summary
+                if (!currentSummary.includes('Notes saved')) {
+                    parsedData.data[rowNumber - 1][summaryColumn] = 
+                        currentSummary ? `${currentSummary}, Notes saved` : 'Notes saved';
+                }
+    
+                // Update users.csv
+                try {
+                    console.log('Getting users.csv file');
+                    const usersCSVHandle = await dataFolderHandle.getFileHandle('users.csv');
+                    const usersFile = await usersCSVHandle.getFile();
+                    const usersContent = await usersFile.text();
+                    const usersParsedData = Papa.parse(usersContent, { header: true });
+                    
+                    const authorIndex = usersParsedData.data.findIndex(row => row.Author === author);
+                    console.log('Author index in users.csv:', authorIndex);
+                    
+                    if (authorIndex !== -1) {
+                        const userSummaryColumn = `Summary_${selectedUser}`;
+                        const userCurrentSummary = usersParsedData.data[authorIndex][userSummaryColumn] || '';
+                        
+                        if (!userCurrentSummary.includes('Notes saved')) {
+                            console.log('Updating users.csv summary');
+                            usersParsedData.data[authorIndex][userSummaryColumn] = 
+                                userCurrentSummary ? `${userCurrentSummary}, Notes saved` : 'Notes saved';
+                            
+                            const usersCsvContent = Papa.unparse(usersParsedData.data);
+                            const usersWritable = await usersCSVHandle.createWritable();
+                            await usersWritable.write(usersCsvContent);
+                            await usersWritable.close();
+                            console.log('Successfully updated users.csv');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error updating users.csv:', error);
+                }
+            }
+            
+            // Write back to trajectory file
+            const csvContent = Papa.unparse(parsedData.data);
+            const writable = await trajectoryFileHandle.createWritable();
+            await writable.write(csvContent);
+            await writable.close();
+            showToast('Notes saved successfully!');
+
+            // Refresh the display
+            await displayRowDetails(author, rowNumber, parsedData.data[rowNumber - 1], parsedData.data);
+        }
+    } catch (error) {
+        console.error('Error saving post notes:', error);
+        alert('Failed to save notes. Please try again.');
+    }
+};
