@@ -1186,11 +1186,39 @@ async function selectUser(username, isRestoring = false) {
             updateSendButton();
             const hash = new URLSearchParams(window.location.hash.slice(1));
             const author = hash.get('author');
+            const row = hash.get('row');
+            
             if (author && usersCSVData && usersCSVData.length > 0) {
                 // Add a small delay to ensure everything is loaded
                 setTimeout(async () => {
                     try {
-                        await displayTrajectoryFile(author, true);
+                        if (row) {
+                            // Get the data and display the specific row
+                            const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
+                            const trajectoriesFolderHandle = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
+                            const trajectoryFileHandle = await trajectoriesFolderHandle.getFileHandle(`${author}.csv`);
+                            const file = await trajectoryFileHandle.getFile();
+                            const content = await file.text();
+                            
+                            const parsedData = Papa.parse(content, {
+                                header: true,
+                                skipEmptyLines: true,
+                                dynamicTyping: true,
+                            });
+                            
+                            const rowNumber = parseInt(row);
+                            if (parsedData.data[rowNumber - 1]) {
+                                // Set lastViewedPost before displaying row details
+                                lastViewedPost = {
+                                    rowNumber: rowNumber,
+                                    rowData: parsedData.data[rowNumber - 1],
+                                    page: Math.ceil(rowNumber / 30)
+                                };
+                                await displayRowDetails(author, rowNumber, parsedData.data[rowNumber - 1], parsedData.data);
+                            }
+                        } else {
+                            await displayTrajectoryFile(author, true);
+                        }
                     } catch (error) {
                         console.error('Error displaying trajectory file in setTimeout:', error);
                     }
@@ -2255,7 +2283,7 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                         </div>
                                         
                                         ${(() => {
-                                            const urls = rowData.selftext.match(/https?:\/\/[^\s]+/g) || [];
+                                            const urls = rowData.selftext.match(/https?:\/\/[^\s<>"']+(?:\([^)]*\))?/g) || [];
                                             if (urls.length > 0) {
                                                 return `
                                                     <div class="mt-3 pt-3 border-top">
@@ -2316,108 +2344,99 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
             <div class="card mt-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Conspiracy Analysis</h5>
-                    <button class="btn btn-info btn-sm" onclick="showGuidelines()">
-                        <i class="bi bi-question-circle"></i> Guidelines
-                    </button>
+                    <a href="#" class="btn btn-outline-primary btn-sm" onclick="showGuidelines(); return false;">
+                        <i class="bi bi-book"></i> Guidelines
+                    </a>
                 </div>
                 <div class="card-body">
                     <form id="conspiracyAnalysisForm">
                         <div class="row">
-                            <!-- Left Column -->
-                            <div class="col-md-6">
-                                <!-- Topics and Specific Topic -->
-                                <div class="mb-3">
-                                    <label class="form-label">Topics</label>
-                                    <select class="form-select" multiple id="topicSelect" style="height: 150px;">
-                                        <option value="American Politics & Government">American Politics & Government</option>
-                                        <option value="Non-American Politics & Government">Non-American Politics & Government</option>
-                                        <option value="Celebrities & Entertainment Industry">Celebrities & Entertainment Industry</option>
-                                        <option value="Aliens & Extraterrestrial Life">Aliens & Extraterrestrial Life</option>
-                                        <option value="Secret Societies & Elites">Secret Societies & Elites</option>
-                                        <option value="Media & Information Control">Media & Information Control</option>
-                                        <option value="Pedophilia & Elite Abuse Rings">Pedophilia & Elite Abuse Rings</option>
-                                        <option value="Science & Medicine">Science & Medicine</option>
-                                        <option value="Technology & Surveillance">Technology & Surveillance</option>
-                                        <option value="COVID-19 & Public Health">COVID-19 & Public Health</option>
-                                        <option value="War & International Affairs">War & International Affairs</option>
-                                        <option value="Finance & Economic Control">Finance & Economic Control</option>
-                                        <option value="Religion & Spirituality">Religion & Spirituality</option>
-                                        <option value="Historical Revisionism">Historical Revisionism</option>
-                                        <option value="Other">Other</option>
-                                        <option value="Meta Post">Meta Post</option>
-                                        <option value="none of the above">None of the above</option>
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Specific Topic</label>
-                                    <input type="text" class="form-control" id="specificTopic" value="${rowData[`SpecificTopic_${selectedUser}`] || ''}">
-                                </div>
-
-                                <!-- Belief Section -->
-                                <div class="mb-3">
-                                    <label class="form-label">Degree of Belief</label>
-                                    <select class="form-select" id="beliefDegree">
-                                        <option value="strong disbelief">Strong Disbelief</option>
-                                        <option value="disbelief">Disbelief</option>
-                                        <option value="doubt">Doubt</option>
-                                        <option value="neutral">Neutral</option>
-                                        <option value="belief">Belief</option>
-                                        <option value="strong belief">Strong Belief</option>
-                                        <option value="unclear">Unclear</option>
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Comments on Degree of Belief</label>
-                                    <textarea class="form-control" id="beliefComments" rows="2">${rowData[`BeliefComments_${selectedUser}`] || ''}</textarea>
-                                </div>
+                            <!-- First Row: Topics and Sources -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Topics</label>
+                                <select class="form-select" multiple id="topics" style="height: 150px;">
+                                    <option value="American Politics & Government">American Politics & Government</option>
+                                    <option value="Aliens & Extraterrestrial Life">Aliens & Extraterrestrial Life</option>
+                                    <option value="Media Control & Censorship">Media Control & Censorship</option>
+                                    <option value="Global Elites & Secret Societies">Global Elites & Secret Societies</option>
+                                    <option value="Health & Medical">Health & Medical</option>
+                                    <option value="Technology & Surveillance">Technology & Surveillance</option>
+                                    <option value="Environmental Issues">Environmental Issues</option>
+                                    <option value="Financial & Economic">Financial & Economic</option>
+                                    <option value="Historical Events">Historical Events</option>
+                                    <option value="Religious & Spiritual">Religious & Spiritual</option>
+                                    <option value="Science & Research">Science & Research</option>
+                                    <option value="Social Control & Mind Control">Social Control & Mind Control</option>
+                                    <option value="Other">Other</option>
+                                </select>
                             </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Sources Used</label>
+                                <select class="form-select" multiple id="sourcesUsed" style="height: 150px;">
+                                    <option value="Mainstream News Articles">Mainstream News Articles</option>
+                                    <option value="Alternative & Fringe News Sites">Alternative & Fringe News Sites</option>
+                                    <option value="YouTube Videos from unverified users">YouTube Videos from unverified users</option>
+                                    <option value="YouTube Videos from official channels">YouTube Videos from official channels</option>
+                                    <option value="Blogs and Personal Websites">Blogs and Personal Websites</option>
+                                    <option value="Social Media Posts">Social Media Posts</option>
+                                    <option value="Leaked Documents & WikiLeaks">Leaked Documents & WikiLeaks</option>
+                                    <option value="Memes and Infographics">Memes and Infographics</option>
+                                    <option value="Forums and Imageboards">Forums and Imageboards</option>
+                                    <option value="Documentaries and Pseudo-Documentaries">Documentaries and Pseudo-Documentaries</option>
+                                    <option value="Personal Testimonies and Anecdotes">Personal Testimonies and Anecdotes</option>
+                                    <option value="Other">Other</option>
+                                    <option value="No sources">No sources</option>
+                                </select>
+                            </div>
+                        </div>
 
-                            <!-- Right Column -->
-                            <div class="col-md-6">
-                                <!-- Reactions Section -->
-                                <div class="mb-3">
-                                    <label class="form-label">Reactions in Comments</label>
-                                    <select class="form-select" id="commentReactions">
-                                        <option value="none">None</option>
-                                        <option value="supportive">Supportive</option>
-                                        <option value="doubtful">Doubtful</option>
-                                        <option value="mixed">Mixed</option>
-                                        <option value="hostile">Hostile</option>
-                                        <option value="unclear">Unclear</option>
-                                    </select>
-                                </div>
+                        <!-- Second Row: Specific Topic and Belief -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Specific Topic</label>
+                                <input type="text" class="form-control" id="specificTopic" value="${rowData[`SpecificTopic_${selectedUser}`] || ''}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Degree of Belief</label>
+                                <select class="form-select" id="beliefDegree">
+                                    <option value="Strong Disbelief">Strong Disbelief</option>
+                                    <option value="Disbelief">Disbelief</option>
+                                    <option value="Neutral">Neutral</option>
+                                    <option value="Belief">Belief</option>
+                                    <option value="Strong Belief">Strong Belief</option>
+                                    <option value="Unclear">Unclear</option>
+                                </select>
+                            </div>
+                        </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label">Comments on Reactions</label>
-                                    <textarea class="form-control" id="reactionComments" rows="2">${rowData[`ReactionComments_${selectedUser}`] || ''}</textarea>
-                                </div>
+                        <!-- Third Row: Comments -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Comments on Degree of Belief</label>
+                                <textarea class="form-control" id="beliefComments" rows="2">${rowData[`BeliefComments_${selectedUser}`] || ''}</textarea>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Comments on Sources</label>
+                                <textarea class="form-control" id="sourceComments" rows="2">${rowData[`SourceComments_${selectedUser}`] || ''}</textarea>
+                            </div>
+                        </div>
 
-                                <!-- Sources Section -->
-                                <div class="mb-3">
-                                    <label class="form-label">Sources Used</label>
-                                    <select class="form-select" multiple id="sourcesUsed" style="height: 150px;">
-                                        <option value="Mainstream News Articles">Mainstream News Articles</option>
-                                        <option value="Alternative & Fringe News Sites">Alternative & Fringe News Sites</option>
-                                        <option value="YouTube Videos from unverified users">YouTube Videos from unverified users</option>
-                                        <option value="YouTube Videos from official channels">YouTube Videos from official channels</option>
-                                        <option value="Blogs and Personal Websites">Blogs and Personal Websites</option>
-                                        <option value="Social Media Posts">Social Media Posts</option>
-                                        <option value="Leaked Documents & WikiLeaks">Leaked Documents & WikiLeaks</option>
-                                        <option value="Memes and Infographics">Memes and Infographics</option>
-                                        <option value="Forums and Imageboards">Forums and Imageboards</option>
-                                        <option value="Documentaries and Pseudo-Documentaries">Documentaries and Pseudo-Documentaries</option>
-                                        <option value="Personal Testimonies and Anecdotes">Personal Testimonies and Anecdotes</option>
-                                        <option value="Other">Other</option>
-                                        <option value="No sources">No sources</option>
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Comments on Sources</label>
-                                    <textarea class="form-control" id="sourceComments" rows="2">${rowData[`SourceComments_${selectedUser}`] || ''}</textarea>
-                                </div>
+                        <!-- Fourth Row: Reactions -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Reactions in Comments</label>
+                                <select class="form-select" id="commentReactions">
+                                    <option value="None">None</option>
+                                    <option value="Supportive">Supportive</option>
+                                    <option value="Doubtful">Doubtful</option>
+                                    <option value="Hostile">Hostile</option>
+                                    <option value="Mixed">Mixed</option>
+                                    <option value="Unclear">Unclear</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Comments on Reactions</label>
+                                <textarea class="form-control" id="reactionComments" rows="2">${rowData[`ReactionComments_${selectedUser}`] || ''}</textarea>
                             </div>
                         </div>
 
