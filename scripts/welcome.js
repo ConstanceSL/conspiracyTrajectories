@@ -2314,108 +2314,119 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
 
             <!-- Conspiracy Analysis Section -->
             <div class="card mt-4">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Conspiracy Analysis</h5>
+                    <button class="btn btn-info btn-sm" onclick="showGuidelines()">
+                        <i class="bi bi-question-circle"></i> Guidelines
+                    </button>
                 </div>
                 <div class="card-body">
                     <form id="conspiracyAnalysisForm">
-                        <!-- Topic Selection -->
-                        <div class="mb-3">
-                            <label class="form-label">Topics</label>
-                            <select class="form-select" multiple id="topicSelect" style="height: 200px;">
-                                <option value="American Politics & Government">American Politics & Government</option>
-                                <option value="Non-American Politics & Government">Non-American Politics & Government</option>
-                                <option value="Celebrities & Entertainment Industry">Celebrities & Entertainment Industry</option>
-                                <option value="Aliens & Extraterrestrial Life">Aliens & Extraterrestrial Life</option>
-                                <option value="Secret Societies & Elites">Secret Societies & Elites</option>
-                                <option value="Media & Information Control">Media & Information Control</option>
-                                <option value="Pedophilia & Elite Abuse Rings">Pedophilia & Elite Abuse Rings</option>
-                                <option value="Science & Medicine">Science & Medicine</option>
-                                <option value="Technology & Surveillance">Technology & Surveillance</option>
-                                <option value="COVID-19 & Public Health">COVID-19 & Public Health</option>
-                                <option value="War & International Affairs">War & International Affairs</option>
-                                <option value="Finance & Economic Control">Finance & Economic Control</option>
-                                <option value="Religion & Spirituality">Religion & Spirituality</option>
-                                <option value="Historical Revisionism">Historical Revisionism</option>
-                                <option value="none of the above">None of the above</option>
-                            </select>
-                        </div>
+                        <div class="row">
+                            <!-- Left Column -->
+                            <div class="col-md-6">
+                                <!-- Topics and Specific Topic -->
+                                <div class="mb-3">
+                                    <label class="form-label">Topics</label>
+                                    <select class="form-select" multiple id="topicSelect" style="height: 150px;">
+                                        <option value="American Politics & Government">American Politics & Government</option>
+                                        <option value="Non-American Politics & Government">Non-American Politics & Government</option>
+                                        <option value="Celebrities & Entertainment Industry">Celebrities & Entertainment Industry</option>
+                                        <option value="Aliens & Extraterrestrial Life">Aliens & Extraterrestrial Life</option>
+                                        <option value="Secret Societies & Elites">Secret Societies & Elites</option>
+                                        <option value="Media & Information Control">Media & Information Control</option>
+                                        <option value="Pedophilia & Elite Abuse Rings">Pedophilia & Elite Abuse Rings</option>
+                                        <option value="Science & Medicine">Science & Medicine</option>
+                                        <option value="Technology & Surveillance">Technology & Surveillance</option>
+                                        <option value="COVID-19 & Public Health">COVID-19 & Public Health</option>
+                                        <option value="War & International Affairs">War & International Affairs</option>
+                                        <option value="Finance & Economic Control">Finance & Economic Control</option>
+                                        <option value="Religion & Spirituality">Religion & Spirituality</option>
+                                        <option value="Historical Revisionism">Historical Revisionism</option>
+                                        <option value="Other">Other</option>
+                                        <option value="Meta Post">Meta Post</option>
+                                        <option value="none of the above">None of the above</option>
+                                    </select>
+                                </div>
 
-                        <!-- Specific Topic -->
-                        <div class="mb-3">
-                            <label class="form-label">Specific Topic</label>
-                            <input type="text" class="form-control" id="specificTopic" value="${rowData[`SpecificTopic_${selectedUser}`] || ''}">
-                        </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Specific Topic</label>
+                                    <input type="text" class="form-control" id="specificTopic" value="${rowData[`SpecificTopic_${selectedUser}`] || ''}">
+                                </div>
 
-                        <!-- Degree of Belief -->
-                        <div class="mb-3">
-                            <label class="form-label">Degree of Belief</label>
-                            <select class="form-select" id="beliefDegree">
-                                <option value="strong disbelief">Strong Disbelief</option>
-                                <option value="disbelief">Disbelief</option>
-                                <option value="doubt">Doubt</option>
-                                <option value="neutral">Neutral</option>
-                                <option value="belief">Belief</option>
-                                <option value="strong belief">Strong Belief</option>
-                                <option value="unclear">Unclear</option>
-                            </select>
-                        </div>
+                                <!-- Belief Section -->
+                                <div class="mb-3">
+                                    <label class="form-label">Degree of Belief</label>
+                                    <select class="form-select" id="beliefDegree">
+                                        <option value="strong disbelief">Strong Disbelief</option>
+                                        <option value="disbelief">Disbelief</option>
+                                        <option value="doubt">Doubt</option>
+                                        <option value="neutral">Neutral</option>
+                                        <option value="belief">Belief</option>
+                                        <option value="strong belief">Strong Belief</option>
+                                        <option value="unclear">Unclear</option>
+                                    </select>
+                                </div>
 
-                        <!-- Belief Comments -->
-                        <div class="mb-3">
-                            <label class="form-label">Comments on Degree of Belief</label>
-                            <textarea class="form-control" id="beliefComments" rows="2">${rowData[`BeliefComments_${selectedUser}`] || ''}</textarea>
-                        </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Comments on Degree of Belief</label>
+                                    <textarea class="form-control" id="beliefComments" rows="2">${rowData[`BeliefComments_${selectedUser}`] || ''}</textarea>
+                                </div>
+                            </div>
 
-                        <!-- Comment Reactions -->
-                        <div class="mb-3">
-                            <label class="form-label">Reactions in Comments</label>
-                            <select class="form-select" id="commentReactions">
-                                <option value="none">None</option>
-                                <option value="supportive">Supportive</option>
-                                <option value="doubtful">Doubtful</option>
-                                <option value="mixed">Mixed</option>
-                                <option value="hostile">Hostile</option>
-                                <option value="unclear">Unclear</option>
-                            </select>
-                        </div>
+                            <!-- Right Column -->
+                            <div class="col-md-6">
+                                <!-- Reactions Section -->
+                                <div class="mb-3">
+                                    <label class="form-label">Reactions in Comments</label>
+                                    <select class="form-select" id="commentReactions">
+                                        <option value="none">None</option>
+                                        <option value="supportive">Supportive</option>
+                                        <option value="doubtful">Doubtful</option>
+                                        <option value="mixed">Mixed</option>
+                                        <option value="hostile">Hostile</option>
+                                        <option value="unclear">Unclear</option>
+                                    </select>
+                                </div>
 
-                        <!-- Reaction Comments -->
-                        <div class="mb-3">
-                            <label class="form-label">Comments on Reactions</label>
-                            <textarea class="form-control" id="reactionComments" rows="2">${rowData[`ReactionComments_${selectedUser}`] || ''}</textarea>
-                        </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Comments on Reactions</label>
+                                    <textarea class="form-control" id="reactionComments" rows="2">${rowData[`ReactionComments_${selectedUser}`] || ''}</textarea>
+                                </div>
 
-                        <!-- Sources Used -->
-                        <div class="mb-3">
-                            <label class="form-label">Sources Used</label>
-                            <select class="form-select" multiple id="sourcesUsed" style="height: 200px;">
-                                <option value="Mainstream News Articles">Mainstream News Articles</option>
-                                <option value="Alternative & Fringe News Sites">Alternative & Fringe News Sites</option>
-                                <option value="YouTube Videos from unverified users">YouTube Videos from unverified users</option>
-                                <option value="YouTube Videos from official channels">YouTube Videos from official channels</option>
-                                <option value="Blogs and Personal Websites">Blogs and Personal Websites</option>
-                                <option value="Social Media Screenshots">Social Media Screenshots</option>
-                                <option value="Leaked Documents & WikiLeaks">Leaked Documents & WikiLeaks</option>
-                                <option value="Memes and Infographics">Memes and Infographics</option>
-                                <option value="Forums and Imageboards">Forums and Imageboards</option>
-                                <option value="Documentaries and Pseudo-Documentaries">Documentaries and Pseudo-Documentaries</option>
-                                <option value="Personal Testimonies and Anecdotes">Personal Testimonies and Anecdotes</option>
-                                <option value="Other">Other</option>
-                                <option value="No sources">No sources</option>
-                            </select>
-                        </div>
+                                <!-- Sources Section -->
+                                <div class="mb-3">
+                                    <label class="form-label">Sources Used</label>
+                                    <select class="form-select" multiple id="sourcesUsed" style="height: 150px;">
+                                        <option value="Mainstream News Articles">Mainstream News Articles</option>
+                                        <option value="Alternative & Fringe News Sites">Alternative & Fringe News Sites</option>
+                                        <option value="YouTube Videos from unverified users">YouTube Videos from unverified users</option>
+                                        <option value="YouTube Videos from official channels">YouTube Videos from official channels</option>
+                                        <option value="Blogs and Personal Websites">Blogs and Personal Websites</option>
+                                        <option value="Social Media Posts">Social Media Posts</option>
+                                        <option value="Leaked Documents & WikiLeaks">Leaked Documents & WikiLeaks</option>
+                                        <option value="Memes and Infographics">Memes and Infographics</option>
+                                        <option value="Forums and Imageboards">Forums and Imageboards</option>
+                                        <option value="Documentaries and Pseudo-Documentaries">Documentaries and Pseudo-Documentaries</option>
+                                        <option value="Personal Testimonies and Anecdotes">Personal Testimonies and Anecdotes</option>
+                                        <option value="Other">Other</option>
+                                        <option value="No sources">No sources</option>
+                                    </select>
+                                </div>
 
-                        <!-- Source Comments -->
-                        <div class="mb-3">
-                            <label class="form-label">Comments on Sources</label>
-                            <textarea class="form-control" id="sourceComments" rows="2">${rowData[`SourceComments_${selectedUser}`] || ''}</textarea>
+                                <div class="mb-3">
+                                    <label class="form-label">Comments on Sources</label>
+                                    <textarea class="form-control" id="sourceComments" rows="2">${rowData[`SourceComments_${selectedUser}`] || ''}</textarea>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Save Button -->
-                        <button type="button" class="btn btn-success" onclick="saveConspiracyAnalysis('${author}', ${rowNumber})">
-                            Save Analysis
-                        </button>
+                        <div class="text-center mt-3">
+                            <button type="button" class="btn btn-success" onclick="saveConspiracyAnalysis('${author}', ${rowNumber})">
+                                Save Analysis
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -2989,5 +3000,47 @@ window.saveConspiracyAnalysis = async function(author, rowNumber) {
     } catch (error) {
         console.error('Error saving conspiracy analysis:', error);
         alert('Failed to save conspiracy analysis. Please try again.');
+    }
+};
+
+// Add the showGuidelines function
+window.showGuidelines = async function() {
+    try {
+        const response = await fetch('guidelines.md');
+        const text = await response.text();
+        
+        // Create modal
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.id = 'guidelinesModal';
+        modal.innerHTML = `
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Conspiracy Analysis Guidelines</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="guidelinesContent" class="markdown-body"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        const modalInstance = new bootstrap.Modal(modal);
+        modalInstance.show();
+
+        // Convert markdown to HTML
+        const content = document.getElementById('guidelinesContent');
+        content.innerHTML = marked.parse(text);
+
+        // Cleanup
+        modal.addEventListener('hidden.bs.modal', () => {
+            document.body.removeChild(modal);
+        });
+    } catch (error) {
+        console.error('Error loading guidelines:', error);
+        alert('Failed to load guidelines. Please try again.');
     }
 };
