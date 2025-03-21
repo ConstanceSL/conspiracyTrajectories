@@ -2249,9 +2249,14 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                     </a>
                                 ` : '';
                             })()}
-                            <a href="${rowData.permalink}" class="btn btn-primary" target="_blank" 
+                            <a href="${rowData.permalink}" class="btn btn-primary me-2" target="_blank" 
                                style="border: 2px solid white !important;">
                                 Open in Reddit
+                            </a>
+                            <a href="#" class="btn btn-primary" target="_blank" 
+                               style="border: 2px solid white !important;"
+                               onclick="openGuidelines(); return false;">
+                                Guidelines
                             </a>
                         </div>
                     </div>
@@ -2287,13 +2292,17 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                             if (urls.length > 0) {
                                                 return `
                                                     <div class="mt-3 pt-3 border-top">
-                                                        ${urls.map((url, index) => `
-                                                            <a href="${url}" 
-                                                               class="btn btn-primary btn-sm me-2 mb-2" 
-                                                               target="_blank">
-                                                                ${urls.length > 1 ? `Linked content ${index + 1}` : 'Open text link'}
-                                                            </a>
-                                                        `).join('')}
+                                                        ${urls.map((url, index) => {
+                                                            // Clean the URL by removing any trailing parentheses and their contents
+                                                            const cleanUrl = url.replace(/\([^)]*\)$/, '');
+                                                            return `
+                                                                <a href="${cleanUrl}" 
+                                                                   class="btn btn-primary btn-sm me-2 mb-2" 
+                                                                   target="_blank">
+                                                                    ${urls.length > 1 ? `Linked content ${index + 1}` : 'Open text link'}
+                                                                </a>
+                                                            `;
+                                                        }).join('')}
                                                     </div>
                                                 `;
                                             }
@@ -2352,99 +2361,91 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                     <form id="conspiracyAnalysisForm">
                         <div class="row">
                             <!-- First Row: Topics and Sources -->
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Topics</label>
-                                <select class="form-select" multiple id="topics" style="height: 150px;">
-                                    <option value="American Politics & Government">American Politics & Government</option>
-                                    <option value="Aliens & Extraterrestrial Life">Aliens & Extraterrestrial Life</option>
-                                    <option value="Media Control & Censorship">Media Control & Censorship</option>
-                                    <option value="Global Elites & Secret Societies">Global Elites & Secret Societies</option>
-                                    <option value="Health & Medical">Health & Medical</option>
-                                    <option value="Technology & Surveillance">Technology & Surveillance</option>
-                                    <option value="Environmental Issues">Environmental Issues</option>
-                                    <option value="Financial & Economic">Financial & Economic</option>
-                                    <option value="Historical Events">Historical Events</option>
-                                    <option value="Religious & Spiritual">Religious & Spiritual</option>
-                                    <option value="Science & Research">Science & Research</option>
-                                    <option value="Social Control & Mind Control">Social Control & Mind Control</option>
-                                    <option value="Other">Other</option>
-                                </select>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Topics</label>
+                                    <select class="form-select" multiple id="topics" style="height: 150px;">
+                                        <option value="American Politics & Government">American Politics & Government</option>
+                                        <option value="Aliens & Extraterrestrial Life">Aliens & Extraterrestrial Life</option>
+                                        <option value="Media Control & Censorship">Media Control & Censorship</option>
+                                        <option value="Global Elites & Secret Societies">Global Elites & Secret Societies</option>
+                                        <option value="Health & Medical">Health & Medical</option>
+                                        <option value="Technology & Surveillance">Technology & Surveillance</option>
+                                        <option value="Environmental Issues">Environmental Issues</option>
+                                        <option value="Financial & Economic">Financial & Economic</option>
+                                        <option value="Historical Events">Historical Events</option>
+                                        <option value="Religious & Spiritual">Religious & Spiritual</option>
+                                        <option value="Science & Research">Science & Research</option>
+                                        <option value="Social Control & Mind Control">Social Control & Mind Control</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Sources Used</label>
+                                    <select class="form-select" multiple id="sourcesUsed" style="height: 150px;">
+                                        <option value="Mainstream News Articles">Mainstream News Articles</option>
+                                        <option value="Alternative & Fringe News Sites">Alternative & Fringe News Sites</option>
+                                        <option value="YouTube Videos from unverified users">YouTube Videos from unverified users</option>
+                                        <option value="YouTube Videos from official channels">YouTube Videos from official channels</option>
+                                        <option value="Blogs and Personal Websites">Blogs and Personal Websites</option>
+                                        <option value="Social Media Posts">Social Media Posts</option>
+                                        <option value="Leaked Documents & WikiLeaks">Leaked Documents & WikiLeaks</option>
+                                        <option value="Memes and Infographics">Memes and Infographics</option>
+                                        <option value="Forums and Imageboards">Forums and Imageboards</option>
+                                        <option value="Documentaries and Pseudo-Documentaries">Documentaries and Pseudo-Documentaries</option>
+                                        <option value="Personal Testimonies and Anecdotes">Personal Testimonies and Anecdotes</option>
+                                        <option value="Other">Other</option>
+                                        <option value="No sources">No sources</option>
+                                    </select>
+                                    <label class="form-label mt-2">Comments on Sources</label>
+                                    <textarea class="form-control" id="sourceComments" rows="2">${rowData[`SourceComments_${selectedUser}`] || ''}</textarea>
+                                </div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Sources Used</label>
-                                <select class="form-select" multiple id="sourcesUsed" style="height: 150px;">
-                                    <option value="Mainstream News Articles">Mainstream News Articles</option>
-                                    <option value="Alternative & Fringe News Sites">Alternative & Fringe News Sites</option>
-                                    <option value="YouTube Videos from unverified users">YouTube Videos from unverified users</option>
-                                    <option value="YouTube Videos from official channels">YouTube Videos from official channels</option>
-                                    <option value="Blogs and Personal Websites">Blogs and Personal Websites</option>
-                                    <option value="Social Media Posts">Social Media Posts</option>
-                                    <option value="Leaked Documents & WikiLeaks">Leaked Documents & WikiLeaks</option>
-                                    <option value="Memes and Infographics">Memes and Infographics</option>
-                                    <option value="Forums and Imageboards">Forums and Imageboards</option>
-                                    <option value="Documentaries and Pseudo-Documentaries">Documentaries and Pseudo-Documentaries</option>
-                                    <option value="Personal Testimonies and Anecdotes">Personal Testimonies and Anecdotes</option>
-                                    <option value="Other">Other</option>
-                                    <option value="No sources">No sources</option>
-                                </select>
-                            </div>
-                        </div>
 
-                        <!-- Second Row: Specific Topic and Belief -->
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Specific Topic</label>
-                                <input type="text" class="form-control" id="specificTopic" value="${rowData[`SpecificTopic_${selectedUser}`] || ''}">
+                            <!-- Second Row: Specific Topic and Belief -->
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Specific Topic</label>
+                                    <input type="text" class="form-control" id="specificTopic" value="${rowData[`SpecificTopic_${selectedUser}`] || ''}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Degree of Belief</label>
+                                    <select class="form-select" id="beliefDegree">
+                                        <option value="Strong Disbelief">Strong Disbelief</option>
+                                        <option value="Disbelief">Disbelief</option>
+                                        <option value="Neutral">Neutral</option>
+                                        <option value="Belief">Belief</option>
+                                        <option value="Strong Belief">Strong Belief</option>
+                                        <option value="Unclear">Unclear</option>
+                                    </select>
+                                    <label class="form-label mt-2">Comments on Degree of Belief</label>
+                                    <textarea class="form-control" id="beliefComments" rows="2">${rowData[`BeliefComments_${selectedUser}`] || ''}</textarea>
+                                </div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Degree of Belief</label>
-                                <select class="form-select" id="beliefDegree">
-                                    <option value="Strong Disbelief">Strong Disbelief</option>
-                                    <option value="Disbelief">Disbelief</option>
-                                    <option value="Neutral">Neutral</option>
-                                    <option value="Belief">Belief</option>
-                                    <option value="Strong Belief">Strong Belief</option>
-                                    <option value="Unclear">Unclear</option>
-                                </select>
-                            </div>
-                        </div>
 
-                        <!-- Third Row: Comments -->
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Comments on Degree of Belief</label>
-                                <textarea class="form-control" id="beliefComments" rows="2">${rowData[`BeliefComments_${selectedUser}`] || ''}</textarea>
+                            <!-- Third Row: Reactions -->
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Reactions in Comments</label>
+                                    <select class="form-select" id="commentReactions">
+                                        <option value="None">None</option>
+                                        <option value="Supportive">Supportive</option>
+                                        <option value="Doubtful">Doubtful</option>
+                                        <option value="Hostile">Hostile</option>
+                                        <option value="Mixed">Mixed</option>
+                                        <option value="Unclear">Unclear</option>
+                                    </select>
+                                    <label class="form-label mt-2">Comments on Reactions</label>
+                                    <textarea class="form-control" id="reactionComments" rows="2">${rowData[`ReactionComments_${selectedUser}`] || ''}</textarea>
+                                </div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Comments on Sources</label>
-                                <textarea class="form-control" id="sourceComments" rows="2">${rowData[`SourceComments_${selectedUser}`] || ''}</textarea>
-                            </div>
-                        </div>
 
-                        <!-- Fourth Row: Reactions -->
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Reactions in Comments</label>
-                                <select class="form-select" id="commentReactions">
-                                    <option value="None">None</option>
-                                    <option value="Supportive">Supportive</option>
-                                    <option value="Doubtful">Doubtful</option>
-                                    <option value="Hostile">Hostile</option>
-                                    <option value="Mixed">Mixed</option>
-                                    <option value="Unclear">Unclear</option>
-                                </select>
+                            <!-- Save Button -->
+                            <div class="text-center mt-3">
+                                <button type="button" class="btn btn-success" onclick="saveConspiracyAnalysis('${author}', ${rowNumber})">
+                                    Save Analysis
+                                </button>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Comments on Reactions</label>
-                                <textarea class="form-control" id="reactionComments" rows="2">${rowData[`ReactionComments_${selectedUser}`] || ''}</textarea>
-                            </div>
-                        </div>
-
-                        <!-- Save Button -->
-                        <div class="text-center mt-3">
-                            <button type="button" class="btn btn-success" onclick="saveConspiracyAnalysis('${author}', ${rowNumber})">
-                                Save Analysis
-                            </button>
                         </div>
                     </form>
                 </div>
@@ -3062,4 +3063,78 @@ window.showGuidelines = async function() {
         console.error('Error loading guidelines:', error);
         alert('Failed to load guidelines. Please try again.');
     }
+};
+
+// Replace the showGuidelines function with openGuidelines
+window.openGuidelines = function() {
+    const helpWindow = window.open('', 'Guidelines', 'width=800,height=600');
+    
+    helpWindow.document.write(`
+        <html lang="en">
+        <head>
+            <title>Guidelines - Conspiracy Trajectory Analysis App</title>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown.css">
+            <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+            <style>
+                .markdown-body {
+                    box-sizing: border-box;
+                    min-width: 200px;
+                    max-width: 980px;
+                    margin: 0 auto;
+                    padding: 45px;
+                }
+                @media (max-width: 767px) {
+                    .markdown-body {
+                        padding: 15px;
+                    }
+                }
+                .nav-tabs {
+                    margin-bottom: 20px;
+                }
+                .tab-content {
+                    display: none;
+                }
+                .tab-content.active {
+                    display: block;
+                }
+            </style>
+        </head>
+        <body class="markdown-body">
+            <div id="content">
+                <ul class="nav nav-tabs" id="guidelinesTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="conspiracy-tab" data-bs-toggle="tab" data-bs-target="#conspiracy" type="button" role="tab">Conspiracy Analysis</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="trajectory-tab" data-bs-toggle="tab" data-bs-target="#trajectory" type="button" role="tab">Trajectory Graphs</button>
+                    </li>
+                </ul>
+                <div class="tab-content" id="guidelinesTabContent">
+                    <div class="tab-pane fade show active" id="conspiracy" role="tabpanel"></div>
+                    <div class="tab-pane fade" id="trajectory" role="tabpanel"></div>
+                </div>
+            </div>
+            <script>
+                document.title = "Guidelines - Conspiracy Trajectory Analysis App";
+                fetch('guidelines.md')
+                    .then(response => response.text())
+                    .then(text => {
+                        document.getElementById('conspiracy').innerHTML = marked.parse(text);
+                    })
+                    .catch(error => {
+                        document.getElementById('conspiracy').innerHTML = 'Error loading conspiracy guidelines: ' + error;
+                    });
+                
+                fetch('trajectory_guidelines.md')
+                    .then(response => response.text())
+                    .then(text => {
+                        document.getElementById('trajectory').innerHTML = marked.parse(text);
+                    })
+                    .catch(error => {
+                        document.getElementById('trajectory').innerHTML = 'Error loading trajectory guidelines: ' + error;
+                    });
+            </script>
+        </body>
+        </html>
+    `);
 };
