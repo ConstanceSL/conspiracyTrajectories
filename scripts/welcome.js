@@ -228,7 +228,18 @@ async function selectDataFolder() {
         // Only show directory picker if browser is compatible
         const handle = await window.showDirectoryPicker();
         
-        // Only proceed if we got a valid handle
+        // Check if we have the correct folder by looking for location_check.txt
+        try {
+            await handle.getFileHandle('location_check.txt');
+        } catch (locationError) {
+            console.error('Location check failed:', locationError);
+            alert(`Wrong folder selected! 
+                  \nPlease make sure you select the correct data folder containing 'location_check.txt'.
+                  \n\nClick the Help button in the top right corner for more information.`);
+            return;
+        }
+        
+        // Only proceed if we got a valid handle and passed location check
         if (handle) {
             folderHandle = handle;
             await loadUsersFolder();
