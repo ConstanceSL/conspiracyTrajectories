@@ -2711,6 +2711,7 @@ window.savePostNotes = async function(author, rowNumber) {
     try {
         console.log('Starting savePostNotes:', { author, rowNumber });
         const newNotes = document.getElementById('postNotes').innerHTML;
+        const hasNotes = newNotes.replace(/<[^>]*>/g, '').trim() !== '';
         
         // Get the trajectory file
         const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
@@ -2729,43 +2730,53 @@ window.savePostNotes = async function(author, rowNumber) {
             const summaryColumn = `Summary_${selectedUser}`;
             const currentSummary = parsedData.data[rowNumber - 1][summaryColumn] || '';
             
-            if (newNotes.replace(/<[^>]*>/g, '').trim() !== '') {
-                // Update trajectory file summary
+            // Update trajectory file summary based on whether there are notes
+            if (hasNotes) {
                 if (!currentSummary.includes('Notes saved')) {
                     parsedData.data[rowNumber - 1][summaryColumn] = 
                         currentSummary ? `${currentSummary}, Notes saved` : 'Notes saved';
                 }
+            } else {
+                // Remove 'Notes saved' from summary if notes are empty
+                parsedData.data[rowNumber - 1][summaryColumn] = 
+                    currentSummary.replace(/, Notes saved|Notes saved,|Notes saved/, '').trim();
+            }
     
-                // Update users.csv
-                try {
-                    console.log('Getting users.csv file');
-                    const usersCSVHandle = await dataFolderHandle.getFileHandle('users.csv');
-                    const usersFile = await usersCSVHandle.getFile();
-                    const usersContent = await usersFile.text();
-                    const usersParsedData = Papa.parse(usersContent, { header: true });
+            // Update users.csv
+            try {
+                console.log('Getting users.csv file');
+                const usersCSVHandle = await dataFolderHandle.getFileHandle('users.csv');
+                const usersFile = await usersCSVHandle.getFile();
+                const usersContent = await usersFile.text();
+                const usersParsedData = Papa.parse(usersContent, { header: true });
+                
+                const authorIndex = usersParsedData.data.findIndex(row => row.Author === author);
+                console.log('Author index in users.csv:', authorIndex);
+                
+                if (authorIndex !== -1) {
+                    const userSummaryColumn = `Summary_${selectedUser}`;
+                    const userCurrentSummary = usersParsedData.data[authorIndex][userSummaryColumn] || '';
                     
-                    const authorIndex = usersParsedData.data.findIndex(row => row.Author === author);
-                    console.log('Author index in users.csv:', authorIndex);
-                    
-                    if (authorIndex !== -1) {
-                        const userSummaryColumn = `Summary_${selectedUser}`;
-                        const userCurrentSummary = usersParsedData.data[authorIndex][userSummaryColumn] || '';
-                        
+                    if (hasNotes) {
                         if (!userCurrentSummary.includes('Notes saved')) {
                             console.log('Updating users.csv summary');
                             usersParsedData.data[authorIndex][userSummaryColumn] = 
                                 userCurrentSummary ? `${userCurrentSummary}, Notes saved` : 'Notes saved';
-                            
-                            const usersCsvContent = Papa.unparse(usersParsedData.data);
-                            const usersWritable = await usersCSVHandle.createWritable();
-                            await usersWritable.write(usersCsvContent);
-                            await usersWritable.close();
-                            console.log('Successfully updated users.csv');
                         }
+                    } else {
+                        // Remove 'Notes saved' from user summary if notes are empty
+                        usersParsedData.data[authorIndex][userSummaryColumn] = 
+                            userCurrentSummary.replace(/, Notes saved|Notes saved,|Notes saved/, '').trim();
                     }
-                } catch (error) {
-                    console.error('Error updating users.csv:', error);
+                    
+                    const usersCsvContent = Papa.unparse(usersParsedData.data);
+                    const usersWritable = await usersCSVHandle.createWritable();
+                    await usersWritable.write(usersCsvContent);
+                    await usersWritable.close();
+                    console.log('Successfully updated users.csv');
                 }
+            } catch (error) {
+                console.error('Error updating users.csv:', error);
             }
             
             // Write back to trajectory file
