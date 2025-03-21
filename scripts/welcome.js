@@ -199,19 +199,33 @@ window.addEventListener('beforeunload', function (e) {
     return 'Changes you made may not be saved. Are you sure you want to leave?';
 });
 
-// Check Browser Compatibility TO BE DELETED
+// Check Browser Compatibility
 function checkBrowserCompatibility() {
-    const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-    if (!isChrome) {
-        alert('This app is only supported in Google Chrome. Please open the app in Chrome for full functionality.');
+    const userAgent = navigator.userAgent;
+    const isChrome = /Chrome/.test(userAgent) && /Google Inc/.test(navigator.vendor);
+    const isEdge = /Edg/.test(userAgent) && /Chrome/.test(userAgent);
+    
+    if (!isChrome && !isEdge) {
+        alert('This app is only supported in Google Chrome or Microsoft Edge. Please open the app in one of these browsers for full functionality.');
         document.body.innerHTML = '<h2 style="color: red; text-align: center;">Unsupported Browser</h2>';
-        throw new Error('Unsupported browser detected. Please use Google Chrome.');
+        throw new Error('Unsupported browser detected. Please use Google Chrome or Microsoft Edge.');
     }
 }
 
 async function selectDataFolder() {
     try {
-        // Show directory picker and wait for selection
+        // Check browser compatibility first
+        const userAgent = navigator.userAgent;
+        const isChrome = /Chrome/.test(userAgent) && /Google Inc/.test(navigator.vendor);
+        const isEdge = /Edg/.test(userAgent) && /Chrome/.test(userAgent);
+        
+        if (!isChrome && !isEdge) {
+            alert('This app is only supported in Google Chrome or Microsoft Edge. Please open the app in one of these browsers for full functionality.');
+            document.body.innerHTML = '<h2 style="color: red; text-align: center;">Unsupported Browser</h2>';
+            throw new Error('Unsupported browser detected. Please use Google Chrome or Microsoft Edge.');
+        }
+
+        // Only show directory picker if browser is compatible
         const handle = await window.showDirectoryPicker();
         
         // Only proceed if we got a valid handle
@@ -349,7 +363,7 @@ function openReadme() {
     const helpWindow = window.open('', 'Help', 'width=800,height=600');
     
     helpWindow.document.write(`
-        <html>
+        <html lang="en">
         <head>
             <title>Help - Conspiracy Trajectory Analysis App</title>
             <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown.css">
@@ -648,10 +662,12 @@ async function updateCSVFile(sourceFolder, targetFolder, fileName, username) {
 async function selectDataFolder() {
     try {
         // Check browser compatibility first
-        const isChromium = /Chrome/.test(navigator.userAgent) || /Edg/.test(navigator.userAgent);
-        const isGoogleOrMicrosoft = /Google Inc/.test(navigator.vendor) || /Microsoft/.test(navigator.vendor);
-        if (!isChromium || !isGoogleOrMicrosoft) {
-            alert('This app is only supported in Google Chrome or Microsoft Edge. Please open the app in a supported browser for full functionality.');
+        const userAgent = navigator.userAgent;
+        const isChrome = /Chrome/.test(userAgent) && /Google Inc/.test(navigator.vendor);
+        const isEdge = /Edg/.test(userAgent) && /Chrome/.test(userAgent);
+        
+        if (!isChrome && !isEdge) {
+            alert('This app is only supported in Google Chrome or Microsoft Edge. Please open the app in one of these browsers for full functionality.');
             document.body.innerHTML = '<h2 style="color: red; text-align: center;">Unsupported Browser</h2>';
             throw new Error('Unsupported browser detected. Please use Google Chrome or Microsoft Edge.');
         }
@@ -2011,47 +2027,6 @@ window.saveNotes = async function(author) {
     }
 };
 
-window.saveAnalysis = async function(author, rowNumber) {
-    try {
-        const topic = document.getElementById('postTopic').value;
-        const belief = document.getElementById('beliefDegree').value;
-        const reaction = document.getElementById('communityReaction').value;
-        const sources = document.getElementById('sourcesUsed').value;
-        
-        // Get the trajectory file
-        const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
-        const trajectoriesFolderHandle = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
-        const trajectoryFileHandle = await trajectoriesFolderHandle.getFileHandle(`${author}.csv`);
-        
-        // Read current content
-        const file = await trajectoryFileHandle.getFile();
-        const content = await file.text();
-        const parsedData = Papa.parse(content, { header: true });
-        
-        // Update analysis for the specific row
-        if (parsedData.data[rowNumber - 1]) {
-            parsedData.data[rowNumber - 1][`Topic_${selectedUser}`] = topic;
-            parsedData.data[rowNumber - 1][`Belief_${selectedUser}`] = belief;
-            parsedData.data[rowNumber - 1][`Reaction_${selectedUser}`] = reaction;
-            parsedData.data[rowNumber - 1][`Sources_${selectedUser}`] = sources;
-            
-            // Write back to trajectory file
-            const csvContent = Papa.unparse(parsedData.data);
-            const writable = await trajectoryFileHandle.createWritable();
-            await writable.write(csvContent);
-            await writable.close();
-            
-            showToast('Analysis saved successfully!');
-            
-            // Refresh the display to show updated data
-            await displayRowDetails(author, rowNumber, parsedData.data[rowNumber - 1], parsedData.data);
-        }
-    } catch (error) {
-        console.error('Error saving analysis:', error);
-        alert('Failed to save analysis. Please try again.');
-    }
-};
-
 // Navigation function
 function navigateTrajectoryPage(author, page) {
     updateURLState({ 
@@ -2142,9 +2117,8 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
             </div>
 
             <div class="row mb-4">
-                <!-- Top Row -->
+                <!-- Notes Section -->
                 <div class="col-md-6 mb-3">
-                    <!-- Notes Section -->
                     <div class="card h-100">
                         <div class="card-header">
                             <h5 class="card-title mb-0">Notes on Post</h5>
@@ -2185,19 +2159,19 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                     </div>
                 </div>
 
+                <!-- Summary Section -->
                 <div class="col-md-6 mb-3">
-                    <!-- Summary Section -->
                     <div class="card h-100">
                         <div class="card-header">
                             <h5 class="card-title mb-0">Post Summary</h5>
                         </div>
-                        <div class="card-body"> 
+                        <div class="card-body">
                             <p><strong>Date:</strong> ${rowData.year}-${rowData.day_month}</p>
                             <p><strong>Status:</strong> ${rowData[`Summary_${selectedUser}`] || 'Not reviewed'}</p>
                             <p><strong>Engagement:</strong></p>
                             <ul class="list-unstyled ms-3">
-                                <li> ${rowData.ups} upvotes</li>
-                                <li> ${rowData.downs} downvotes</li>
+                                <li>👍 ${rowData.ups} upvotes</li>
+                                <li>👎 ${rowData.downs} downvotes</li>
                                 <li>💬 ${rowData.num_comments} comments</li>
                             </ul>
                             ${rowData.total_awards_received > 0 ? 
@@ -2217,60 +2191,6 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                 : ''}
                         </div>
                     </div>
-                </div>
-
-                <!-- Bottom Row - Analysis Form -->
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">Post Analysis</h5>
-                        </div>
-                        <div class="card-body">
-                            <form id="analysisForm" class="row">
-                                <div class="col-md-3 mb-3">
-                                    <label for="postTopic" class="form-label">Topic of the post</label>
-                                    <input type="text" class="form-control" id="postTopic" 
-                                           value="${rowData[`Topic_${selectedUser}`] || ''}"
-                                           placeholder="Enter the main topic">
-                                </div>
-                                
-                                <div class="col-md-3 mb-3">
-                                    <label for="beliefDegree" class="form-label">Degree of belief</label>
-                                    <select class="form-select" id="beliefDegree">
-                                        <option value="">Select belief level</option>
-                                        ${['Unknown', 'Disbelief', 'Doubt', 'Open question', 'Moderate belief', 'Strong belief']
-                                            .map(option => `
-                                                <option value="${option}" 
-                                                    ${rowData[`Belief_${selectedUser}`] === option ? 'selected' : ''}>
-                                                    ${option}
-                                                </option>
-                                            `).join('')}
-                                    </select>
-                                </div>
-                                
-                                <div class="col-md-3 mb-3">
-                                    <label for="communityReaction" class="form-label">Reaction of the community</label>
-                                    <input type="text" class="form-control" id="communityReaction" 
-                                           value="${rowData[`Reaction_${selectedUser}`] || ''}"
-                                           placeholder="Describe community's response">
-                                </div>
-                                
-                                <div class="col-md-3 mb-3">
-                                    <label for="sourcesUsed" class="form-label">Sources used</label>
-                                    <input type="text" class="form-control" id="sourcesUsed" 
-                                           value="${rowData[`Sources_${selectedUser}`] || ''}"
-                                           placeholder="List sources cited">
-                                </div>
-                                
-                                <div class="col-12">
-                                    <button type="button" class="btn btn-success" 
-                                            onclick="saveAnalysis('${author}', ${rowNumber})">
-                                        Save Analysis
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>    
                 </div>
             </div>
 
@@ -2819,7 +2739,6 @@ style.textContent = `
     ::-webkit-scrollbar {
         width: 8px;
     }
-
 
     ::-webkit-scrollbar-track {
         background: #f1f1f1;
