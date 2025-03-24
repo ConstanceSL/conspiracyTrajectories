@@ -2374,7 +2374,8 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                 Done
                             </label>
                         </div>
-                        <button class="btn btn-outline-primary btn-sm" onclick="openGuidelines()">
+                        <button class="btn btn-primary me-2" target="_blank" 
+                               style="border: 2px solid white !important;" onclick="openGuidelines()">
                             <i class="bi bi-book"></i> Guidelines
                         </button>
                     </div>
@@ -3146,8 +3147,18 @@ window.toggleDoneTag = async function(author, rowNumber) {
         // Save the changes
         await savePostNotes(author, rowNumber);
         
-        // Refresh the display to update the row color
-        await displayRowDetails(author, rowNumber, rowData, allData);
+        // Get the current data and refresh the display
+        const dataFolderHandle = await userFolderHandle.getDirectoryHandle('Data');
+        const trajectoriesFolderHandle = await dataFolderHandle.getDirectoryHandle('TrajectoriesToAnalyse');
+        const trajectoryFileHandle = await trajectoriesFolderHandle.getFileHandle(`${author}.csv`);
+        const file = await trajectoryFileHandle.getFile();
+        const content = await file.text();
+        const parsedData = Papa.parse(content, { header: true });
+        
+        // Refresh the display with the updated data
+        await displayRowDetails(author, rowNumber, parsedData.data[rowNumber - 1], parsedData.data);
+        
+        showToast('Done status updated successfully!');
     } catch (error) {
         console.error('Error toggling done tag:', error);
         alert('Failed to update done status. Please try again.');
