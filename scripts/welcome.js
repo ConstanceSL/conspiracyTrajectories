@@ -3016,7 +3016,26 @@ window.saveConspiracyAnalysis = async function(author, rowNumber) {
         
         // Update data for the specific row
         if (parsedData.data[rowNumber - 1]) {
-            // Update conspiracy analysis fields
+            // Create or update conspiracy analysis fields
+            const fields = [
+                `Topics_${selectedUser}`,
+                `SpecificTopic_${selectedUser}`,
+                `BeliefDegree_${selectedUser}`,
+                `BeliefComments_${selectedUser}`,
+                `CommentReactions_${selectedUser}`,
+                `ReactionComments_${selectedUser}`,
+                `SourcesUsed_${selectedUser}`,
+                `SourceComments_${selectedUser}`
+            ];
+
+            // Ensure all fields exist in the header
+            fields.forEach(field => {
+                if (!parsedData.meta.fields.includes(field)) {
+                    parsedData.meta.fields.push(field);
+                }
+            });
+
+            // Update the row data
             parsedData.data[rowNumber - 1][`Topics_${selectedUser}`] = topics.join('; ');
             parsedData.data[rowNumber - 1][`SpecificTopic_${selectedUser}`] = specificTopic;
             parsedData.data[rowNumber - 1][`BeliefDegree_${selectedUser}`] = beliefDegree;
@@ -3025,6 +3044,15 @@ window.saveConspiracyAnalysis = async function(author, rowNumber) {
             parsedData.data[rowNumber - 1][`ReactionComments_${selectedUser}`] = reactionComments;
             parsedData.data[rowNumber - 1][`SourcesUsed_${selectedUser}`] = sourcesUsed.join('; ');
             parsedData.data[rowNumber - 1][`SourceComments_${selectedUser}`] = sourceComments;
+
+            // Ensure all rows have the new fields
+            parsedData.data.forEach(row => {
+                fields.forEach(field => {
+                    if (!(field in row)) {
+                        row[field] = '';
+                    }
+                });
+            });
 
             // Write back to trajectory file
             const csvContent = Papa.unparse(parsedData.data);
