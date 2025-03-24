@@ -1,7 +1,6 @@
 # Conspiracy Analysis Guidelines
 
 ## General Tips
-- **Multiple Selection**: You can select multiple options in the Topics and Sources Used dropdowns by holding CTRL (Windows) or CMD (Mac) while clicking. You can also click and drag to select multiple options at once.
 - **Progress Tracking**: 
   - Use the "Done" checkbox in the analysis card to mark a post as complete. This will add the !DONE! tag to the post's notes and turn the row green in the trajectory view.
   - You can also add the !DONE! tag to the user's notes in the trajectory view when you've completed analyzing all their posts.
