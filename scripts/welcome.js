@@ -2286,21 +2286,42 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                         </div>
                                         
                                         ${(() => {
-                                            const urls = rowData.selftext.match(/https?:\/\/[^\s<>"']+(?:\([^)]*\))?/g) || [];
-                                            if (urls.length > 0) {
+                                            // Extract both Markdown-style links and plain URLs
+                                            const markdownLinks = rowData.selftext.match(/\[([^\]]+)\]\(([^)]+)\)/g) || [];
+                                            const plainUrls = rowData.selftext.match(/https?:\/\/[^\s<>"']+(?:\([^)]*\))?/g) || [];
+                                            
+                                            // Process Markdown links
+                                            const markdownProcessed = markdownLinks.map(link => {
+                                                const match = link.match(/\[([^\]]+)\]\(([^)]+)\)/);
+                                                if (match) {
+                                                    return {
+                                                        text: match[1],
+                                                        url: match[2]
+                                                    };
+                                                }
+                                                return null;
+                                            }).filter(Boolean);
+
+                                            // Process plain URLs
+                                            const plainProcessed = plainUrls
+                                                .filter(url => !markdownLinks.some(link => link.includes(url)))
+                                                .map(url => ({
+                                                    text: 'Open text link',
+                                                    url: url.replace(/\([^)]*\)$/, '')
+                                                }));
+
+                                            const allLinks = [...markdownProcessed, ...plainProcessed];
+
+                                            if (allLinks.length > 0) {
                                                 return `
                                                     <div class="mt-3 pt-3 border-top">
-                                                        ${urls.map((url, index) => {
-                                                            // Clean the URL by removing any trailing parentheses and their contents
-                                                            const cleanUrl = url.replace(/\([^)]*\)$/, '');
-                                                            return `
-                                                                <a href="${cleanUrl}" 
-                                                                   class="btn btn-primary btn-sm me-2 mb-2" 
-                                                                   target="_blank">
-                                                                    ${urls.length > 1 ? `Linked content ${index + 1}` : 'Open text link'}
-                                                                </a>
-                                                            `;
-                                                        }).join('')}
+                                                        ${allLinks.map((link, index) => `
+                                                            <a href="${link.url}" 
+                                                               class="btn btn-primary btn-sm me-2 mb-2" 
+                                                               target="_blank">
+                                                                ${allLinks.length > 1 ? `${link.text} ${index + 1}` : link.text}
+                                                            </a>
+                                                        `).join('')}
                                                     </div>
                                                 `;
                                             }
