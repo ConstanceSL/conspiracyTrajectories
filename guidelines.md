@@ -1,5 +1,12 @@
 # Conspiracy Analysis Guidelines
 
+## General Tips
+- **Multiple Selection**: You can select multiple options in the Topics and Sources Used dropdowns by holding CTRL (Windows) or CMD (Mac) while clicking. You can also click and drag to select multiple options at once.
+- **Progress Tracking**: 
+  - Use the "Done" checkbox in the analysis card to mark a post as complete. This will add the !DONE! tag to the post's notes and turn the row green in the trajectory view.
+  - You can also add the !DONE! tag to the user's notes in the trajectory view when you've completed analyzing all their posts.
+  - The !DONE! tag helps track your progress and will highlight completed rows in green.
+
 ## Topics
 Select all relevant topics that apply to the post. If none of the predefined topics fit, select "None of the above" and specify in the "Specific Topic" field.
 - **American Politics & Government**: Claims involving U.S. elections, politicians, laws, deep state, intelligence agencies (e.g., CIA, FBI), or federal conspiracies.
@@ -15,7 +22,7 @@ Select all relevant topics that apply to the post. If none of the predefined top
 - **War & International Affairs**: False flag operations, hidden motives for war, military-industrial complex, or covert alliances/conflicts.
 - **Finance & Economic Control**: Central banks, crypto conspiracies, manipulated markets, Great Reset, or elite-engineered economic collapse.
 - **Religion & Spirituality**: Satanic rituals, New World Order prophecy, Antichrist, secret truths about religion, or spiritual manipulation.
-- **Historical Revisionism**: Claims that major historical events didn’t happen as taught—e.g., moon landing hoax, Mandela Effect, Holocaust denial.
+- **Historical Revisionism**: Claims that major historical events didn't happen as taught—e.g., moon landing hoax, Mandela Effect, Holocaust denial.
 - **Meta Post**: Post about the user, the conspiracy community, reddit, etc. 
 - **Other**: Use if the main topic of the conspiracy is not in the list above
 - **None of the Above**: Use if none of the topics fit, or if the post is not clearly related to a conspiracy topic.
@@ -53,16 +60,16 @@ Provide specific examples of comment reactions to support your assessment.
 Select all types of sources referenced in the post:
 - **Mainstream News Articles**: Reputable outlets (e.g., BBC, CNN, NYT, Fox) — used to support or challenge mainstream narratives.
 - **Alternative & Fringe News Sites**: Websites known for conspiracies or alternative viewpoints (e.g., Infowars, NaturalNews, RT, The Gateway Pundit).
-- **YouTube Videos from Unverified Users**: User-created videos with theories, “exposés,” or commentary, often low production or anonymous.
+- **YouTube Videos from Unverified Users**: User-created videos with theories, "exposés," or commentary, often low production or anonymous.
 - **YouTube Videos from Official Channels**: Videos from known sources (e.g., news outlets, government channels, or public figures) — may be reinterpreted.
 - **Blogs and Personal Websites**: Informal or self-published pages sharing research, opinions, or personal investigations.
-- **Social Media Posts**: Captures or links to tweets, Instagram posts, TikToks, Facebook comments — often used as “proof” or examples.
+- **Social Media Posts**: Captures or links to tweets, Instagram posts, TikToks, Facebook comments — often used as "proof" or examples.
 - **Leaked Documents & WikiLeaks**: Classified or hacked material, whistleblower content, or references to FOIA documents and leaks.
 - **Memes and Infographics**: Image-based content summarizing theories or claims, often shared to simplify or persuade.
 - **Forums and Imageboards**: Content reposted from Reddit, 4chan, 8kun, Truth Social, or private online communities.
 - **Documentaries and Pseudo-Documentaries**: Long-form videos or films (e.g., *Plandemic*, *The Fall of the Cabal*) — often found on YouTube, Rumble, BitChute.
-- **Personal Testimonies and Anecdotes**: First-person stories or second-hand reports (e.g., “my cousin saw this,” “I worked in the military…”).
-- **Other**: Use if the source doesn’t fit the categories above (e.g., books, speeches, offline materials).
+- **Personal Testimonies and Anecdotes**: First-person stories or second-hand reports (e.g., "my cousin saw this," "I worked in the military…").
+- **Other**: Use if the source doesn't fit the categories above (e.g., books, speeches, offline materials).
 - **No Sources**: Claims made without any cited evidence — pure speculation or opinion.
 
 ## Comments on Sources

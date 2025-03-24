@@ -2367,11 +2367,17 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
             <div class="card mt-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Conspiracy Analysis</h5>
-                    <button class="btn btn-primary" onclick="openGuidelines()"
-                        style="border: 2px solid white !important;">
-                        Guidelines
-
-                    </button>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="doneCheckbox" ${hasDoneTag(rowData[`Notes_${selectedUser}`]) ? 'checked' : ''} onchange="toggleDoneTag('${author}', ${rowNumber})">
+                            <label class="form-check-label" for="doneCheckbox">
+                                Done
+                            </label>
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm" onclick="openGuidelines()">
+                            <i class="bi bi-book"></i> Guidelines
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <form id="conspiracyAnalysisForm">
@@ -3115,4 +3121,35 @@ window.openGuidelines = function() {
 // Add this function to reload the users table
 window.reloadUsersTable = function() {
     displayUsersTable(Object.keys(usersCSVData[0]), usersCSVData);
+};
+
+// Add the toggleDoneTag function
+window.toggleDoneTag = async function(author, rowNumber) {
+    try {
+        const checkbox = document.getElementById('doneCheckbox');
+        const notesElement = document.getElementById('postNotes');
+        let currentNotes = notesElement.innerHTML;
+        
+        if (checkbox.checked) {
+            // Add !DONE! tag if it's not already there
+            if (!currentNotes.includes('!DONE!')) {
+                currentNotes = currentNotes + (currentNotes ? '<br>' : '') + '!DONE!';
+            }
+        } else {
+            // Remove only the !DONE! tag
+            currentNotes = currentNotes.replace(/<br>!DONE!|!DONE!<br>|!DONE!/g, '');
+        }
+        
+        // Update the notes display
+        notesElement.innerHTML = currentNotes;
+        
+        // Save the changes
+        await savePostNotes(author, rowNumber);
+        
+        // Refresh the display to update the row color
+        await displayRowDetails(author, rowNumber, rowData, allData);
+    } catch (error) {
+        console.error('Error toggling done tag:', error);
+        alert('Failed to update done status. Please try again.');
+    }
 };
