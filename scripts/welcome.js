@@ -2251,11 +2251,10 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                style="border: 2px solid white !important;">
                                 Open in Reddit
                             </a>
-                            <a href="#" class="btn btn-primary" target="_blank" 
-                               style="border: 2px solid white !important;"
-                               onclick="openGuidelines(); return false;">
+                            <button class="btn btn-primary" onclick="openGuidelines()"
+                               style="border: 2px solid white !important;">
                                 Guidelines
-                            </a>
+                            </button>
                         </div>
                     </div>
                     <div class="mt-2">
