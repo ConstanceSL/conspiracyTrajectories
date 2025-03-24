@@ -3035,49 +3035,7 @@ window.saveConspiracyAnalysis = async function(author, rowNumber) {
     }
 };
 
-// Add the showGuidelines function
-window.showGuidelines = async function() {
-    try {
-        const response = await fetch('guidelines.md');
-        const text = await response.text();
-        
-        // Create modal
-        const modal = document.createElement('div');
-        modal.className = 'modal fade';
-        modal.id = 'guidelinesModal';
-        modal.innerHTML = `
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Conspiracy Analysis Guidelines</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div id="guidelinesContent" class="markdown-body"></div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        const modalInstance = new bootstrap.Modal(modal);
-        modalInstance.show();
-
-        // Convert markdown to HTML
-        const content = document.getElementById('guidelinesContent');
-        content.innerHTML = marked.parse(text);
-
-        // Cleanup
-        modal.addEventListener('hidden.bs.modal', () => {
-            document.body.removeChild(modal);
-        });
-    } catch (error) {
-        console.error('Error loading guidelines:', error);
-        alert('Failed to load guidelines. Please try again.');
-    }
-};
-
-// Replace the showGuidelines function with openGuidelines
+// Replace the openGuidelines function with a simpler version that matches openReadme
 window.openGuidelines = function() {
     const helpWindow = window.open('', 'Guidelines', 'width=800,height=600');
     
@@ -3100,50 +3058,19 @@ window.openGuidelines = function() {
                         padding: 15px;
                     }
                 }
-                .nav-tabs {
-                    margin-bottom: 20px;
-                }
-                .tab-content {
-                    display: none;
-                }
-                .tab-content.active {
-                    display: block;
-                }
             </style>
         </head>
         <body class="markdown-body">
-            <div id="content">
-                <ul class="nav nav-tabs" id="guidelinesTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="conspiracy-tab" data-bs-toggle="tab" data-bs-target="#conspiracy" type="button" role="tab">Conspiracy Analysis</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="trajectory-tab" data-bs-toggle="tab" data-bs-target="#trajectory" type="button" role="tab">Trajectory Graphs</button>
-                    </li>
-                </ul>
-                <div class="tab-content" id="guidelinesTabContent">
-                    <div class="tab-pane fade show active" id="conspiracy" role="tabpanel"></div>
-                    <div class="tab-pane fade" id="trajectory" role="tabpanel"></div>
-                </div>
-            </div>
+            <div id="content"></div>
             <script>
                 document.title = "Guidelines - Conspiracy Trajectory Analysis App";
                 fetch('guidelines.md')
                     .then(response => response.text())
                     .then(text => {
-                        document.getElementById('conspiracy').innerHTML = marked.parse(text);
+                        document.getElementById('content').innerHTML = marked.parse(text);
                     })
                     .catch(error => {
-                        document.getElementById('conspiracy').innerHTML = 'Error loading conspiracy guidelines: ' + error;
-                    });
-                
-                fetch('trajectory_guidelines.md')
-                    .then(response => response.text())
-                    .then(text => {
-                        document.getElementById('trajectory').innerHTML = marked.parse(text);
-                    })
-                    .catch(error => {
-                        document.getElementById('trajectory').innerHTML = 'Error loading trajectory guidelines: ' + error;
+                        document.getElementById('content').innerHTML = 'Error loading guidelines: ' + error;
                     });
             </script>
         </body>
