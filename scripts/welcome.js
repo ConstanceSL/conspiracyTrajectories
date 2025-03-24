@@ -2123,7 +2123,8 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
 
         const filePreviewDiv = document.getElementById('file-preview');
         if (!filePreviewDiv) {
-            throw new Error('Could not find file-preview element');
+            console.error('file-preview element not found');
+            return; // Silently return without showing an alert
         }
 
         filePreviewDiv.innerHTML = `
@@ -2402,6 +2403,8 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Specific Topic</label>
                                     <input type="text" class="form-control" id="specificTopic" value="${rowData[`SpecificTopic_${selectedUser}`] || ''}">
+                                </div>
+                                <div class="col-md-6 mb-3">
                                     <label class="form-label mt-2">Comments on Sources</label>
                                     <textarea class="form-control" id="sourceComments" rows="2">${rowData[`SourceComments_${selectedUser}`] || ''}</textarea>
                                 </div>
@@ -2419,6 +2422,8 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                         <option value="Mixed">Mixed</option>
                                         <option value="Unclear">Unclear</option>
                                     </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
                                     <label class="form-label">Degree of Belief</label>
                                     <select class="form-select" id="beliefDegree">
                                         <option value="Strong Disbelief">Strong Disbelief</option>
@@ -2435,6 +2440,8 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label mt-2">Comments on Degree of Belief</label>
                                     <textarea class="form-control" id="beliefComments" rows="2">${rowData[`BeliefComments_${selectedUser}`] || ''}</textarea>
+                                </div>
+                                <div class="col-md-6 mb-3">
                                     <label class="form-label mt-2">Comments on Reactions</label>
                                     <textarea class="form-control" id="reactionComments" rows="2">${rowData[`ReactionComments_${selectedUser}`] || ''}</textarea>
                                 </div>
@@ -3121,4 +3128,9 @@ window.openGuidelines = function() {
         </body>
         </html>
     `);
+};
+
+// Add this function to reload the users table
+window.reloadUsersTable = function() {
+    displayUsersTable(Object.keys(usersCSVData[0]), usersCSVData);
 };
