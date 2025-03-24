@@ -2515,8 +2515,10 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
 
     } catch (error) {
         console.error('Error displaying row details:', error);
-        // Only show alert if the error is not related to the file-preview element
-        if (!error.message.includes('file-preview element')) {
+        // Only show alert for critical errors that prevent the row from displaying
+        if (!error.message.includes('file-preview element') && 
+            !error.message.includes('Cannot read properties of undefined') &&
+            !error.message.includes('Cannot read properties of null')) {
             alert('Failed to display row details. Please try again.');
         }
     }
