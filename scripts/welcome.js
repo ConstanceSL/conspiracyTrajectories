@@ -2387,7 +2387,7 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Topics (Click to select multiple)</label>
-                                    <select class="form-select" multiple id="topics" style="height: 150px; overflow-y: auto; user-select: none;">
+                                    <select class="form-select" multiple id="topics" style="height: 150px; overflow-y: auto;">
                                         <option value="" disabled selected>Please select topics</option>
                                         <option value="American Politics & Government">American Politics & Government</option>
                                         <option value="Aliens & Extraterrestrial Life">Aliens & Extraterrestrial Life</option>
@@ -2406,7 +2406,7 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Sources Used (Click to select multiple)</label>
-                                    <select class="form-select" multiple id="sourcesUsed" style="height: 150px; overflow-y: auto; user-select: none;">
+                                    <select class="form-select" multiple id="sourcesUsed" style="height: 150px; overflow-y: auto;">
                                         <option value="" disabled selected>Please select sources</option>
                                         <option value="Mainstream News Articles">Mainstream News Articles</option>
                                         <option value="Alternative & Fringe News Sites">Alternative & Fringe News Sites</option>
@@ -3153,3 +3153,22 @@ window.toggleDoneTag = async function(author, rowNumber) {
         // Don't show alert since the functionality works
     }
 };
+
+// Add this function to handle multiple selection
+window.setupMultipleSelect = function() {
+    const selects = document.querySelectorAll('select[multiple]');
+    selects.forEach(select => {
+        select.addEventListener('mousedown', function(e) {
+            if (e.target.tagName === 'OPTION') {
+                e.preventDefault();
+                e.target.selected = !e.target.selected;
+                return false;
+            }
+        });
+    });
+};
+
+// Call the setup function after the form is rendered
+document.addEventListener('DOMContentLoaded', function() {
+    setupMultipleSelect();
+});
