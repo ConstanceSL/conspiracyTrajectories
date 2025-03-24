@@ -2385,8 +2385,8 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                             <!-- First Row: Topics and Sources -->
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Topics</label>
-                                    <select class="form-select" multiple id="topics (CTRL or CMD + click to select multiple)" style="height: 150px;">
+                                    <label class="form-label">Topics (CTRL or CMD + click to select multiple)</label>
+                                    <select class="form-select" multiple id="topics" style="height: 150px;">
                                         <option value="" disabled selected>Please select topics</option>
                                         <option value="American Politics & Government">American Politics & Government</option>
                                         <option value="Aliens & Extraterrestrial Life">Aliens & Extraterrestrial Life</option>
