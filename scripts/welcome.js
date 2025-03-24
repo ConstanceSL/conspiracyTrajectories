@@ -2372,9 +2372,9 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
             <div class="card mt-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Conspiracy Analysis</h5>
-                    <a href="#" class="btn btn-outline-primary btn-sm" onclick="openGuidelines(); return false;">
+                    <button class="btn btn-outline-primary btn-sm" onclick="openGuidelines()">
                         <i class="bi bi-book"></i> Guidelines
-                    </a>
+                    </button>
                 </div>
                 <div class="card-body">
                     <form id="conspiracyAnalysisForm">
@@ -2986,8 +2986,7 @@ window.saveConspiracyAnalysis = async function(author, rowNumber) {
         console.log('Starting saveConspiracyAnalysis:', { author, rowNumber });
         
         // Get form values
-        const topicSelect = document.getElementById('topicSelect');
-        const topics = Array.from(topicSelect.selectedOptions).map(option => option.value);
+        const topics = Array.from(document.getElementById('topics').selectedOptions).map(option => option.value);
         const specificTopic = document.getElementById('specificTopic').value;
         const beliefDegree = document.getElementById('beliefDegree').value;
         const beliefComments = document.getElementById('beliefComments').value;
