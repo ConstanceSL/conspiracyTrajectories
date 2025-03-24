@@ -2383,6 +2383,7 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Topics</label>
                                     <select class="form-select" multiple id="topics" style="height: 150px;">
+                                        <option value="" disabled selected>Please select topics</option>
                                         <option value="American Politics & Government">American Politics & Government</option>
                                         <option value="Aliens & Extraterrestrial Life">Aliens & Extraterrestrial Life</option>
                                         <option value="Media Control & Censorship">Media Control & Censorship</option>
@@ -2401,6 +2402,7 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Sources Used</label>
                                     <select class="form-select" multiple id="sourcesUsed" style="height: 150px;">
+                                        <option value="" disabled selected>Please select sources</option>
                                         <option value="Mainstream News Articles">Mainstream News Articles</option>
                                         <option value="Alternative & Fringe News Sites">Alternative & Fringe News Sites</option>
                                         <option value="YouTube Videos from unverified users">YouTube Videos from unverified users</option>
@@ -2435,6 +2437,7 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Reactions in Comments</label>
                                     <select class="form-select" id="commentReactions">
+                                        <option value="" disabled selected>Please select an answer</option>
                                         <option value="None">None</option>
                                         <option value="Supportive">Supportive</option>
                                         <option value="Doubtful">Doubtful</option>
@@ -2446,6 +2449,7 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Degree of Belief</label>
                                     <select class="form-select" id="beliefDegree">
+                                        <option value="" disabled selected>Please select an answer</option>
                                         <option value="Strong Disbelief">Strong Disbelief</option>
                                         <option value="Disbelief">Disbelief</option>
                                         <option value="Neutral">Neutral</option>
@@ -2480,14 +2484,14 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
         `;
 
         // Load saved values after the form is rendered
-        const topicSelect = document.getElementById('topicSelect');
+        const topics = document.getElementById('topics');
         const beliefDegree = document.getElementById('beliefDegree');
         const commentReactions = document.getElementById('commentReactions');
         const sourcesUsed = document.getElementById('sourcesUsed');
 
         // Load topics
         const savedTopics = rowData[`Topics_${selectedUser}`]?.split('; ') || [];
-        Array.from(topicSelect.options).forEach(option => {
+        Array.from(topics.options).forEach(option => {
             if (savedTopics.includes(option.value)) {
                 option.selected = true;
             }
@@ -2987,13 +2991,17 @@ window.saveConspiracyAnalysis = async function(author, rowNumber) {
         console.log('Starting saveConspiracyAnalysis:', { author, rowNumber });
         
         // Get form values
-        const topics = Array.from(document.getElementById('topics').selectedOptions).map(option => option.value);
+        const topics = Array.from(document.getElementById('topics').selectedOptions)
+            .filter(option => option.value !== '') // Filter out the default "Please select" option
+            .map(option => option.value);
         const specificTopic = document.getElementById('specificTopic').value;
         const beliefDegree = document.getElementById('beliefDegree').value;
         const beliefComments = document.getElementById('beliefComments').value;
         const commentReactions = document.getElementById('commentReactions').value;
         const reactionComments = document.getElementById('reactionComments').value;
-        const sourcesUsed = Array.from(document.getElementById('sourcesUsed').selectedOptions).map(option => option.value);
+        const sourcesUsed = Array.from(document.getElementById('sourcesUsed').selectedOptions)
+            .filter(option => option.value !== '') // Filter out the default "Please select" option
+            .map(option => option.value);
         const sourceComments = document.getElementById('sourceComments').value;
 
         // Get the trajectory file
