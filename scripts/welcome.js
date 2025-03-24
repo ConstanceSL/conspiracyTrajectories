@@ -2375,7 +2375,7 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                             </label>
                         </div>
                         <div class="border-start border-secondary mx-2" style="height: 24px;"></div>
-                        <button class="btn btn-outline-light btn-sm" onclick="openGuidelines()">
+                        <button class="btn btn-primary" style="border: 2px solid white !important;" onclick="openGuidelines()">
                             <i class="bi bi-book"></i> Guidelines
                         </button>
                     </div>
