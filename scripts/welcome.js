@@ -2386,8 +2386,8 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                             <!-- First Row: Topics and Sources -->
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Topics (CTRL or CMD + click to select multiple)</label>
-                                    <select class="form-select" multiple id="topics" style="height: 150px; overflow-y: auto;">
+                                    <label class="form-label">Topics (Click to select multiple)</label>
+                                    <select class="form-select" multiple id="topics" style="height: 150px; overflow-y: auto; user-select: none;">
                                         <option value="" disabled selected>Please select topics</option>
                                         <option value="American Politics & Government">American Politics & Government</option>
                                         <option value="Aliens & Extraterrestrial Life">Aliens & Extraterrestrial Life</option>
@@ -2405,8 +2405,8 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                     </select>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Sources Used (CTRL or CMD + click to select multiple)</label>
-                                    <select class="form-select" multiple id="sourcesUsed" style="height: 150px; overflow-y: auto;">
+                                    <label class="form-label">Sources Used (Click to select multiple)</label>
+                                    <select class="form-select" multiple id="sourcesUsed" style="height: 150px; overflow-y: auto; user-select: none;">
                                         <option value="" disabled selected>Please select sources</option>
                                         <option value="Mainstream News Articles">Mainstream News Articles</option>
                                         <option value="Alternative & Fringe News Sites">Alternative & Fringe News Sites</option>
