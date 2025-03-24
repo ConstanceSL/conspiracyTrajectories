@@ -2251,10 +2251,6 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                style="border: 2px solid white !important;">
                                 Open in Reddit
                             </a>
-                            <button class="btn btn-primary" onclick="openGuidelines()"
-                               style="border: 2px solid white !important;">
-                                Guidelines
-                            </button>
                         </div>
                     </div>
                     <div class="mt-2">
@@ -2371,8 +2367,10 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
             <div class="card mt-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Conspiracy Analysis</h5>
-                    <button class="btn btn-outline-primary btn-sm" onclick="openGuidelines()">
-                        <i class="bi bi-book"></i> Guidelines
+                    <button class="btn btn-primary" onclick="openGuidelines()"
+                        style="border: 2px solid white !important;">
+                        Guidelines
+
                     </button>
                 </div>
                 <div class="card-body">
@@ -2382,7 +2380,7 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Topics</label>
-                                    <select class="form-select" multiple id="topics" style="height: 150px;">
+                                    <select class="form-select" multiple id="topics (CTRL or CMD + click to select multiple)" style="height: 150px;">
                                         <option value="" disabled selected>Please select topics</option>
                                         <option value="American Politics & Government">American Politics & Government</option>
                                         <option value="Aliens & Extraterrestrial Life">Aliens & Extraterrestrial Life</option>
@@ -2400,7 +2398,7 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                                     </select>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Sources Used</label>
+                                    <label class="form-label">Sources Used (CTRL or CMD + click to select multiple)</label>
                                     <select class="form-select" multiple id="sourcesUsed" style="height: 150px;">
                                         <option value="" disabled selected>Please select sources</option>
                                         <option value="Mainstream News Articles">Mainstream News Articles</option>
@@ -3022,7 +3020,7 @@ window.saveConspiracyAnalysis = async function(author, rowNumber) {
                 `SpecificTopic_${selectedUser}`,
                 `BeliefDegree_${selectedUser}`,
                 `BeliefComments_${selectedUser}`,
-                `CommentReactions_${selectedUser}`,
+                `Reactions_${selectedUser}`,
                 `ReactionComments_${selectedUser}`,
                 `SourcesUsed_${selectedUser}`,
                 `SourceComments_${selectedUser}`
@@ -3040,7 +3038,7 @@ window.saveConspiracyAnalysis = async function(author, rowNumber) {
             parsedData.data[rowNumber - 1][`SpecificTopic_${selectedUser}`] = specificTopic;
             parsedData.data[rowNumber - 1][`BeliefDegree_${selectedUser}`] = beliefDegree;
             parsedData.data[rowNumber - 1][`BeliefComments_${selectedUser}`] = beliefComments;
-            parsedData.data[rowNumber - 1][`CommentReactions_${selectedUser}`] = commentReactions;
+            parsedData.data[rowNumber - 1][`Reactions_${selectedUser}`] = commentReactions;
             parsedData.data[rowNumber - 1][`ReactionComments_${selectedUser}`] = reactionComments;
             parsedData.data[rowNumber - 1][`SourcesUsed_${selectedUser}`] = sourcesUsed.join('; ');
             parsedData.data[rowNumber - 1][`SourceComments_${selectedUser}`] = sourceComments;
