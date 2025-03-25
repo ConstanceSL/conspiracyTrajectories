@@ -1925,8 +1925,8 @@ async function displayTrajectoryFile(author, isRestoring = false) {
                     <div class="d-flex justify-content-between align-items-center">
                         <h3>List of Posts for ${author}</h3>
                         <div class="btn-group gap-2">
-                            <button class="btn btn-primary" onclick="reloadUsersTable()">
-                                ← Back to Users Table
+                            <button class="btn btn-primary" onclick="backToUsersTable()">
+                                <i class="bi bi-arrow-left"></i> Back to Users Table
                             </button>
                             <button class="btn btn-primary" onclick="displayTrajectoryGraph('${author}')">
                                 📊 View Activity Graph
@@ -3151,5 +3151,28 @@ window.toggleDoneTag = async function(author, rowNumber) {
     } catch (error) {
         console.error('Error toggling done tag:', error);
         // Don't show alert since the functionality works
+    }
+};
+
+// Add this function to handle going back to users table
+window.backToUsersTable = async function() {
+    try {
+        // Clear the user notes display
+        const userNotesDiv = document.getElementById('user-notes');
+        if (userNotesDiv) {
+            userNotesDiv.innerHTML = '';
+        }
+        
+        // Update URL to remove author parameter
+        const hash = new URLSearchParams(window.location.hash.slice(1));
+        hash.delete('author');
+        hash.delete('row');
+        hash.delete('page');
+        window.location.hash = hash.toString();
+        
+        // Display the users table
+        await displayUsersTable(Object.keys(usersCSVData[0]), usersCSVData);
+    } catch (error) {
+        console.error('Error going back to users table:', error);
     }
 };
