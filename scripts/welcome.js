@@ -2599,7 +2599,9 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
         });
 
         // After the form is rendered, load saved values
-        loadSavedValues(rowData);
+        setTimeout(() => {
+            loadSavedValues(rowData);
+        }, 0);
 
     } catch (error) {
         console.error('Error displaying row details:', error);
@@ -3246,12 +3248,20 @@ function loadSavedValues(rowData) {
     // Load topics
     document.querySelectorAll('input[type="checkbox"][id^="topic"]').forEach(checkbox => {
         const field = `Topic_${checkbox.value.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedUser}`;
-        checkbox.checked = rowData[field] === '1';
+        if (rowData[field] === '1') {
+            checkbox.checked = true;
+        } else {
+            checkbox.checked = false;
+        }
     });
     
     // Load sources
     document.querySelectorAll('input[type="checkbox"][id^="source"]').forEach(checkbox => {
         const field = `Source_${checkbox.value.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedUser}`;
-        checkbox.checked = rowData[field] === '1';
+        if (rowData[field] === '1') {
+            checkbox.checked = true;
+        } else {
+            checkbox.checked = false;
+        }
     });
 }
