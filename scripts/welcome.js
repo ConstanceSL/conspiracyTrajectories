@@ -3157,6 +3157,12 @@ window.toggleDoneTag = async function(author, rowNumber) {
 // Add this function to handle going back to users table
 window.backToUsersTable = async function() {
     try {
+        // Hide the user notes section
+        const userNotesSection = document.getElementById('user-notes-section');
+        if (userNotesSection) {
+            userNotesSection.style.display = 'none';
+        }
+        
         // Clear the user notes display
         const userNotesDiv = document.getElementById('user-notes');
         if (userNotesDiv) {
