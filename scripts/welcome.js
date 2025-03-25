@@ -3079,12 +3079,18 @@ window.saveConspiracyAnalysis = async function(author, rowNumber) {
         // Get form values
         const topics = {};
         document.querySelectorAll('input[type="checkbox"][id^="topic"]').forEach(checkbox => {
-            topics[`Topic_${checkbox.value.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedUser}`] = checkbox.checked ? '1' : '0';
+            const value = checkbox.value;
+            const field = `Topic_${value.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedUser}`;
+            topics[field] = checkbox.checked ? '1' : '0';
+            console.log('Saving topic:', field, 'Value:', topics[field]);
         });
         
         const sources = {};
         document.querySelectorAll('input[type="checkbox"][id^="source"]').forEach(checkbox => {
-            sources[`Source_${checkbox.value.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedUser}`] = checkbox.checked ? '1' : '0';
+            const value = checkbox.value;
+            const field = `Source_${value.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedUser}`;
+            sources[field] = checkbox.checked ? '1' : '0';
+            console.log('Saving source:', field, 'Value:', sources[field]);
         });
 
         const specificTopic = document.getElementById('specificTopic').value;
@@ -3108,8 +3114,8 @@ window.saveConspiracyAnalysis = async function(author, rowNumber) {
         if (parsedData.data[rowNumber - 1]) {
             // Create or update conspiracy analysis fields
             const fields = [
-                ...Object.keys(topics),
-                ...Object.keys(sources),
+                ...Object.values(topics),
+                ...Object.values(sources),
                 `SpecificTopic_${selectedUser}`,
                 `BeliefDegree_${selectedUser}`,
                 `BeliefComments_${selectedUser}`,
@@ -3245,23 +3251,21 @@ window.toggleDoneTag = async function(author, rowNumber) {
 
 // Add function to load saved values into checkboxes
 function loadSavedValues(rowData) {
+    console.log('Loading saved values for row:', rowData);
+    
     // Load topics
     document.querySelectorAll('input[type="checkbox"][id^="topic"]').forEach(checkbox => {
-        const field = `Topic_${checkbox.value.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedUser}`;
-        if (rowData[field] === '1') {
-            checkbox.checked = true;
-        } else {
-            checkbox.checked = false;
-        }
+        const value = checkbox.value;
+        const field = `Topic_${value.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedUser}`;
+        console.log('Checking topic field:', field, 'Value:', rowData[field]);
+        checkbox.checked = rowData[field] === '1';
     });
     
     // Load sources
     document.querySelectorAll('input[type="checkbox"][id^="source"]').forEach(checkbox => {
-        const field = `Source_${checkbox.value.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedUser}`;
-        if (rowData[field] === '1') {
-            checkbox.checked = true;
-        } else {
-            checkbox.checked = false;
-        }
+        const value = checkbox.value;
+        const field = `Source_${value.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedUser}`;
+        console.log('Checking source field:', field, 'Value:', rowData[field]);
+        checkbox.checked = rowData[field] === '1';
     });
 }
