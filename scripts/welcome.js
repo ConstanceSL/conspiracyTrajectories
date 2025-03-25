@@ -3077,22 +3077,10 @@ window.saveConspiracyAnalysis = async function(author, rowNumber) {
         console.log('Starting saveConspiracyAnalysis:', { author, rowNumber });
         
         // Get form values
-        const topics = {};
-        document.querySelectorAll('input[type="checkbox"][id^="topic"]').forEach(checkbox => {
-            const value = checkbox.value;
-            const field = `Topic_${value.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedUser}`;
-            topics[field] = checkbox.checked ? '1' : '0';
-            console.log('Saving topic:', field, 'Value:', topics[field]);
-        });
-        
-        const sources = {};
-        document.querySelectorAll('input[type="checkbox"][id^="source"]').forEach(checkbox => {
-            const value = checkbox.value;
-            const field = `Source_${value.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedUser}`;
-            sources[field] = checkbox.checked ? '1' : '0';
-            console.log('Saving source:', field, 'Value:', sources[field]);
-        });
-
+        const topics = Array.from(document.querySelectorAll('input[type="checkbox"][id^="topic"]:checked'))
+            .map(checkbox => checkbox.value);
+        const sources = Array.from(document.querySelectorAll('input[type="checkbox"][id^="source"]:checked'))
+            .map(checkbox => checkbox.value);
         const specificTopic = document.getElementById('specificTopic').value;
         const beliefDegree = document.getElementById('beliefDegree').value;
         const beliefComments = document.getElementById('beliefComments').value;
@@ -3114,8 +3102,8 @@ window.saveConspiracyAnalysis = async function(author, rowNumber) {
         if (parsedData.data[rowNumber - 1]) {
             // Create or update conspiracy analysis fields
             const fields = [
-                ...Object.values(topics),
-                ...Object.values(sources),
+                `Topics_${selectedUser}`,
+                `Sources_${selectedUser}`,
                 `SpecificTopic_${selectedUser}`,
                 `BeliefDegree_${selectedUser}`,
                 `BeliefComments_${selectedUser}`,
@@ -3132,12 +3120,8 @@ window.saveConspiracyAnalysis = async function(author, rowNumber) {
             });
 
             // Update the row data
-            Object.entries(topics).forEach(([field, value]) => {
-                parsedData.data[rowNumber - 1][field] = value;
-            });
-            Object.entries(sources).forEach(([field, value]) => {
-                parsedData.data[rowNumber - 1][field] = value;
-            });
+            parsedData.data[rowNumber - 1][`Topics_${selectedUser}`] = topics.join('; ');
+            parsedData.data[rowNumber - 1][`Sources_${selectedUser}`] = sources.join('; ');
             parsedData.data[rowNumber - 1][`SpecificTopic_${selectedUser}`] = specificTopic;
             parsedData.data[rowNumber - 1][`BeliefDegree_${selectedUser}`] = beliefDegree;
             parsedData.data[rowNumber - 1][`BeliefComments_${selectedUser}`] = beliefComments;
@@ -3149,7 +3133,7 @@ window.saveConspiracyAnalysis = async function(author, rowNumber) {
             parsedData.data.forEach(row => {
                 fields.forEach(field => {
                     if (!(field in row)) {
-                        row[field] = '0';
+                        row[field] = '';
                     }
                 });
             });
@@ -3251,21 +3235,15 @@ window.toggleDoneTag = async function(author, rowNumber) {
 
 // Add function to load saved values into checkboxes
 function loadSavedValues(rowData) {
-    console.log('Loading saved values for row:', rowData);
-    
     // Load topics
+    const savedTopics = (rowData[`Topics_${selectedUser}`] || '').split('; ').filter(Boolean);
     document.querySelectorAll('input[type="checkbox"][id^="topic"]').forEach(checkbox => {
-        const value = checkbox.value;
-        const field = `Topic_${value.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedUser}`;
-        console.log('Checking topic field:', field, 'Value:', rowData[field]);
-        checkbox.checked = rowData[field] === '1';
+        checkbox.checked = savedTopics.includes(checkbox.value);
     });
     
     // Load sources
+    const savedSources = (rowData[`Sources_${selectedUser}`] || '').split('; ').filter(Boolean);
     document.querySelectorAll('input[type="checkbox"][id^="source"]').forEach(checkbox => {
-        const value = checkbox.value;
-        const field = `Source_${value.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedUser}`;
-        console.log('Checking source field:', field, 'Value:', rowData[field]);
-        checkbox.checked = rowData[field] === '1';
+        checkbox.checked = savedSources.includes(checkbox.value);
     });
 }
