@@ -2386,118 +2386,42 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                             <!-- First Row: Topics and Sources -->
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Topics</label>
-                                    <div class="border rounded p-2" style="height: 150px; overflow-y: auto;">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="American Politics & Government" id="topic1">
-                                            <label class="form-check-label" for="topic1">American Politics & Government</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Aliens & Extraterrestrial Life" id="topic2">
-                                            <label class="form-check-label" for="topic2">Aliens & Extraterrestrial Life</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Media Control & Censorship" id="topic3">
-                                            <label class="form-check-label" for="topic3">Media Control & Censorship</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Global Elites & Secret Societies" id="topic4">
-                                            <label class="form-check-label" for="topic4">Global Elites & Secret Societies</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Health & Medical" id="topic5">
-                                            <label class="form-check-label" for="topic5">Health & Medical</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Technology & Surveillance" id="topic6">
-                                            <label class="form-check-label" for="topic6">Technology & Surveillance</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Environmental Issues" id="topic7">
-                                            <label class="form-check-label" for="topic7">Environmental Issues</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Financial & Economic" id="topic8">
-                                            <label class="form-check-label" for="topic8">Financial & Economic</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Historical Events" id="topic9">
-                                            <label class="form-check-label" for="topic9">Historical Events</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Religious & Spiritual" id="topic10">
-                                            <label class="form-check-label" for="topic10">Religious & Spiritual</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Science & Research" id="topic11">
-                                            <label class="form-check-label" for="topic11">Science & Research</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Social Control & Mind Control" id="topic12">
-                                            <label class="form-check-label" for="topic12">Social Control & Mind Control</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Other" id="topic13">
-                                            <label class="form-check-label" for="topic13">Other</label>
-                                        </div>
-                                    </div>
+                                    <label class="form-label">Topics (CTRL or CMD + click to select multiple)</label>
+                                    <select class="form-select" multiple id="topics" style="height: 150px; overflow-y: auto;">
+                                        <option value="" disabled selected>Please select topics</option>
+                                        <option value="American Politics & Government">American Politics & Government</option>
+                                        <option value="Aliens & Extraterrestrial Life">Aliens & Extraterrestrial Life</option>
+                                        <option value="Media Control & Censorship">Media Control & Censorship</option>
+                                        <option value="Global Elites & Secret Societies">Global Elites & Secret Societies</option>
+                                        <option value="Health & Medical">Health & Medical</option>
+                                        <option value="Technology & Surveillance">Technology & Surveillance</option>
+                                        <option value="Environmental Issues">Environmental Issues</option>
+                                        <option value="Financial & Economic">Financial & Economic</option>
+                                        <option value="Historical Events">Historical Events</option>
+                                        <option value="Religious & Spiritual">Religious & Spiritual</option>
+                                        <option value="Science & Research">Science & Research</option>
+                                        <option value="Social Control & Mind Control">Social Control & Mind Control</option>
+                                        <option value="Other">Other</option>
+                                    </select>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Sources Used</label>
-                                    <div class="border rounded p-2" style="height: 150px; overflow-y: auto;">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Mainstream News Articles" id="source1">
-                                            <label class="form-check-label" for="source1">Mainstream News Articles</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Alternative & Fringe News Sites" id="source2">
-                                            <label class="form-check-label" for="source2">Alternative & Fringe News Sites</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="YouTube Videos from unverified users" id="source3">
-                                            <label class="form-check-label" for="source3">YouTube Videos from unverified users</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="YouTube Videos from official channels" id="source4">
-                                            <label class="form-check-label" for="source4">YouTube Videos from official channels</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Blogs and Personal Websites" id="source5">
-                                            <label class="form-check-label" for="source5">Blogs and Personal Websites</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Social Media Posts" id="source6">
-                                            <label class="form-check-label" for="source6">Social Media Posts</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Leaked Documents & WikiLeaks" id="source7">
-                                            <label class="form-check-label" for="source7">Leaked Documents & WikiLeaks</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Memes and Infographics" id="source8">
-                                            <label class="form-check-label" for="source8">Memes and Infographics</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Forums and Imageboards" id="source9">
-                                            <label class="form-check-label" for="source9">Forums and Imageboards</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Documentaries and Pseudo-Documentaries" id="source10">
-                                            <label class="form-check-label" for="source10">Documentaries and Pseudo-Documentaries</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Personal Testimonies and Anecdotes" id="source11">
-                                            <label class="form-check-label" for="source11">Personal Testimonies and Anecdotes</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="Other" id="source12">
-                                            <label class="form-check-label" for="source12">Other</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="No sources" id="source13">
-                                            <label class="form-check-label" for="source13">No sources</label>
-                                        </div>
-                                    </div>
+                                    <label class="form-label">Sources Used (CTRL or CMD + click to select multiple)</label>
+                                    <select class="form-select" multiple id="sourcesUsed" style="height: 150px; overflow-y: auto;">
+                                        <option value="" disabled selected>Please select sources</option>
+                                        <option value="Mainstream News Articles">Mainstream News Articles</option>
+                                        <option value="Alternative & Fringe News Sites">Alternative & Fringe News Sites</option>
+                                        <option value="YouTube Videos from unverified users">YouTube Videos from unverified users</option>
+                                        <option value="YouTube Videos from official channels">YouTube Videos from official channels</option>
+                                        <option value="Blogs and Personal Websites">Blogs and Personal Websites</option>
+                                        <option value="Social Media Posts">Social Media Posts</option>
+                                        <option value="Leaked Documents & WikiLeaks">Leaked Documents & WikiLeaks</option>
+                                        <option value="Memes and Infographics">Memes and Infographics</option>
+                                        <option value="Forums and Imageboards">Forums and Imageboards</option>
+                                        <option value="Documentaries and Pseudo-Documentaries">Documentaries and Pseudo-Documentaries</option>
+                                        <option value="Personal Testimonies and Anecdotes">Personal Testimonies and Anecdotes</option>
+                                        <option value="Other">Other</option>
+                                        <option value="No sources">No sources</option>
+                                    </select>
                                 </div>
                             </div>
 
@@ -2597,11 +2521,6 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
                 option.selected = true;
             }
         });
-
-        // After the form is rendered, load saved values
-        setTimeout(() => {
-            loadSavedValues(rowData);
-        }, 0);
 
     } catch (error) {
         console.error('Error displaying row details:', error);
@@ -3077,15 +2996,17 @@ window.saveConspiracyAnalysis = async function(author, rowNumber) {
         console.log('Starting saveConspiracyAnalysis:', { author, rowNumber });
         
         // Get form values
-        const topics = Array.from(document.querySelectorAll('input[type="checkbox"][id^="topic"]:checked'))
-            .map(checkbox => checkbox.value);
-        const sources = Array.from(document.querySelectorAll('input[type="checkbox"][id^="source"]:checked'))
-            .map(checkbox => checkbox.value);
+        const topics = Array.from(document.getElementById('topics').selectedOptions)
+            .filter(option => option.value !== '') // Filter out the default "Please select" option
+            .map(option => option.value);
         const specificTopic = document.getElementById('specificTopic').value;
         const beliefDegree = document.getElementById('beliefDegree').value;
         const beliefComments = document.getElementById('beliefComments').value;
         const commentReactions = document.getElementById('commentReactions').value;
         const reactionComments = document.getElementById('reactionComments').value;
+        const sourcesUsed = Array.from(document.getElementById('sourcesUsed').selectedOptions)
+            .filter(option => option.value !== '') // Filter out the default "Please select" option
+            .map(option => option.value);
         const sourceComments = document.getElementById('sourceComments').value;
 
         // Get the trajectory file
@@ -3103,12 +3024,12 @@ window.saveConspiracyAnalysis = async function(author, rowNumber) {
             // Create or update conspiracy analysis fields
             const fields = [
                 `Topics_${selectedUser}`,
-                `Sources_${selectedUser}`,
                 `SpecificTopic_${selectedUser}`,
                 `BeliefDegree_${selectedUser}`,
                 `BeliefComments_${selectedUser}`,
                 `Reactions_${selectedUser}`,
                 `ReactionComments_${selectedUser}`,
+                `SourcesUsed_${selectedUser}`,
                 `SourceComments_${selectedUser}`
             ];
 
@@ -3121,12 +3042,12 @@ window.saveConspiracyAnalysis = async function(author, rowNumber) {
 
             // Update the row data
             parsedData.data[rowNumber - 1][`Topics_${selectedUser}`] = topics.join('; ');
-            parsedData.data[rowNumber - 1][`Sources_${selectedUser}`] = sources.join('; ');
             parsedData.data[rowNumber - 1][`SpecificTopic_${selectedUser}`] = specificTopic;
             parsedData.data[rowNumber - 1][`BeliefDegree_${selectedUser}`] = beliefDegree;
             parsedData.data[rowNumber - 1][`BeliefComments_${selectedUser}`] = beliefComments;
             parsedData.data[rowNumber - 1][`Reactions_${selectedUser}`] = commentReactions;
             parsedData.data[rowNumber - 1][`ReactionComments_${selectedUser}`] = reactionComments;
+            parsedData.data[rowNumber - 1][`SourcesUsed_${selectedUser}`] = sourcesUsed.join('; ');
             parsedData.data[rowNumber - 1][`SourceComments_${selectedUser}`] = sourceComments;
 
             // Ensure all rows have the new fields
@@ -3232,18 +3153,3 @@ window.toggleDoneTag = async function(author, rowNumber) {
         // Don't show alert since the functionality works
     }
 };
-
-// Add function to load saved values into checkboxes
-function loadSavedValues(rowData) {
-    // Load topics
-    const savedTopics = (rowData[`Topics_${selectedUser}`] || '').split('; ').filter(Boolean);
-    document.querySelectorAll('input[type="checkbox"][id^="topic"]').forEach(checkbox => {
-        checkbox.checked = savedTopics.includes(checkbox.value);
-    });
-    
-    // Load sources
-    const savedSources = (rowData[`Sources_${selectedUser}`] || '').split('; ').filter(Boolean);
-    document.querySelectorAll('input[type="checkbox"][id^="source"]').forEach(checkbox => {
-        checkbox.checked = savedSources.includes(checkbox.value);
-    });
-}
