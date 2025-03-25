@@ -2598,6 +2598,9 @@ async function displayRowDetails(author, rowNumber, rowData, allData) {
             }
         });
 
+        // After the form is rendered, load saved values
+        loadSavedValues(rowData);
+
     } catch (error) {
         console.error('Error displaying row details:', error);
         // Only show alert for critical errors that prevent the row from displaying
@@ -3072,15 +3075,21 @@ window.saveConspiracyAnalysis = async function(author, rowNumber) {
         console.log('Starting saveConspiracyAnalysis:', { author, rowNumber });
         
         // Get form values
-        const topics = Array.from(document.querySelectorAll('input[type="checkbox"][id^="topic"]:checked'))
-            .map(checkbox => checkbox.value);
+        const topics = {};
+        document.querySelectorAll('input[type="checkbox"][id^="topic"]').forEach(checkbox => {
+            topics[`Topic_${checkbox.value.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedUser}`] = checkbox.checked ? '1' : '0';
+        });
+        
+        const sources = {};
+        document.querySelectorAll('input[type="checkbox"][id^="source"]').forEach(checkbox => {
+            sources[`Source_${checkbox.value.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedUser}`] = checkbox.checked ? '1' : '0';
+        });
+
         const specificTopic = document.getElementById('specificTopic').value;
         const beliefDegree = document.getElementById('beliefDegree').value;
         const beliefComments = document.getElementById('beliefComments').value;
         const commentReactions = document.getElementById('commentReactions').value;
         const reactionComments = document.getElementById('reactionComments').value;
-        const sourcesUsed = Array.from(document.querySelectorAll('input[type="checkbox"][id^="source"]:checked'))
-            .map(checkbox => checkbox.value);
         const sourceComments = document.getElementById('sourceComments').value;
 
         // Get the trajectory file
@@ -3097,13 +3106,13 @@ window.saveConspiracyAnalysis = async function(author, rowNumber) {
         if (parsedData.data[rowNumber - 1]) {
             // Create or update conspiracy analysis fields
             const fields = [
-                `Topics_${selectedUser}`,
+                ...Object.keys(topics),
+                ...Object.keys(sources),
                 `SpecificTopic_${selectedUser}`,
                 `BeliefDegree_${selectedUser}`,
                 `BeliefComments_${selectedUser}`,
                 `Reactions_${selectedUser}`,
                 `ReactionComments_${selectedUser}`,
-                `SourcesUsed_${selectedUser}`,
                 `SourceComments_${selectedUser}`
             ];
 
@@ -3115,20 +3124,24 @@ window.saveConspiracyAnalysis = async function(author, rowNumber) {
             });
 
             // Update the row data
-            parsedData.data[rowNumber - 1][`Topics_${selectedUser}`] = topics.join('; ');
+            Object.entries(topics).forEach(([field, value]) => {
+                parsedData.data[rowNumber - 1][field] = value;
+            });
+            Object.entries(sources).forEach(([field, value]) => {
+                parsedData.data[rowNumber - 1][field] = value;
+            });
             parsedData.data[rowNumber - 1][`SpecificTopic_${selectedUser}`] = specificTopic;
             parsedData.data[rowNumber - 1][`BeliefDegree_${selectedUser}`] = beliefDegree;
             parsedData.data[rowNumber - 1][`BeliefComments_${selectedUser}`] = beliefComments;
             parsedData.data[rowNumber - 1][`Reactions_${selectedUser}`] = commentReactions;
             parsedData.data[rowNumber - 1][`ReactionComments_${selectedUser}`] = reactionComments;
-            parsedData.data[rowNumber - 1][`SourcesUsed_${selectedUser}`] = sourcesUsed.join('; ');
             parsedData.data[rowNumber - 1][`SourceComments_${selectedUser}`] = sourceComments;
 
             // Ensure all rows have the new fields
             parsedData.data.forEach(row => {
                 fields.forEach(field => {
                     if (!(field in row)) {
-                        row[field] = '';
+                        row[field] = '0';
                     }
                 });
             });
@@ -3227,3 +3240,18 @@ window.toggleDoneTag = async function(author, rowNumber) {
         // Don't show alert since the functionality works
     }
 };
+
+// Add function to load saved values into checkboxes
+function loadSavedValues(rowData) {
+    // Load topics
+    document.querySelectorAll('input[type="checkbox"][id^="topic"]').forEach(checkbox => {
+        const field = `Topic_${checkbox.value.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedUser}`;
+        checkbox.checked = rowData[field] === '1';
+    });
+    
+    // Load sources
+    document.querySelectorAll('input[type="checkbox"][id^="source"]').forEach(checkbox => {
+        const field = `Source_${checkbox.value.replace(/[^a-zA-Z0-9]/g, '_')}_${selectedUser}`;
+        checkbox.checked = rowData[field] === '1';
+    });
+}
